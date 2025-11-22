@@ -9,8 +9,8 @@ app = Flask(__name__)
 CORS(app)
 
 # Load YOLOv8 model
-# 'yolov8n.pt' will be downloaded automatically if not present
-model = YOLO('yolov8n.pt')
+# Using 'yolov8m.pt' (medium) for better accuracy than 'yolov8n.pt' (nano)
+model = YOLO('yolov8m.pt')
 
 @app.route('/detect', methods=['POST'])
 def detect():
@@ -29,7 +29,9 @@ def detect():
 
         # Run inference
         print("Running inference...")
-        results = model(img)
+        # Lower confidence threshold to 0.15 to detect more objects (improves recall)
+        # Use 'm' model for better accuracy
+        results = model(img, conf=0.15)
 
         detections = []
         for result in results:
