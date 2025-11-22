@@ -28,11 +28,13 @@ def detect():
             return jsonify({'error': 'Failed to decode image'}), 400
 
         # Run inference
+        print("Running inference...")
         results = model(img)
 
         detections = []
         for result in results:
             boxes = result.boxes
+            print(f"Detected {len(boxes)} objects")
             for box in boxes:
                 # Get box coordinates
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
@@ -57,7 +59,8 @@ def detect():
                         'height': h
                     }
                 })
-
+        
+        print(f"Returning {len(detections)} detections")
         return jsonify(detections)
 
     except Exception as e:
@@ -65,4 +68,5 @@ def detect():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+    print("Starting Flask server on port 5000...")
     app.run(debug=True, port=5000)
