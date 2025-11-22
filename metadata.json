@@ -1,0 +1,7 @@
+{
+  "name": "VISIONIQ AI Dashboard",
+  "description": "A professional-grade, AI-powered vision intelligence system for real-time monitoring, object detection, analytics, and an alert system. This dashboard provides live camera feeds, media analysis, and a live alert system.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

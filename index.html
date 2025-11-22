@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VISIONIQ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class', // Enable class-based dark mode
+        theme: {
+          extend: {
+            colors: {
+              'brand-blue': '#0a3d62',
+              'brand-blue-light': '#3c6382',
+              'gray-dark': '#1a202c',
+              'gray-medium': '#2d3748',
+              'gray-light': '#4a5568',
+              'accent-red': '#e53e3e',
+              'accent-yellow': '#d69e2e',
+              'accent-green': '#38a169',
+              // Light mode colors
+              'light-bg': '#f7fafc',
+              'light-secondary': '#ffffff',
+              'light-text': '#1a202c',
+              'light-border': '#e2e8f0',
+            },
+            animation: {
+              'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.1"
+  }
+}
+</script>
+</head>
+  <body class="bg-light-bg dark:bg-gray-dark text-light-text dark:text-gray-200">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

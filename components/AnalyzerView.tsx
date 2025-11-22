@@ -1,0 +1,706 @@
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Camera, DetectionResult } from '../types';
+import { detectObjects } from '../services/gemini';
+import { ShieldCheckIcon } from './icons/ShieldCheckIcon';
+import { XCircleIcon } from './icons/XCircleIcon';
+import { VideoCameraIcon } from './icons/VideoCameraIcon';
+import { TagIcon } from './icons/TagIcon';
+import { ArrowPathIcon } from './icons/ArrowPathIcon';
+import { ArrowUpTrayIcon } from './icons/ArrowUpTrayIcon';
+import { ChevronLeftIcon } from './icons/ChevronLeftIcon';
+import { PlayIcon } from './icons/PlayIcon';
+import { PauseIcon } from './icons/PauseIcon';
+import { CameraSwitchIcon } from './icons/CameraSwitchIcon';
+
+// Helper to generate a consistent color from a string label
+const stringToColor = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+        const value = (hash >> (i * 8)) & 0xFF;
+        color += ('00' + value.toString(16)).slice(-2);
+    }
+    return color;
+}
+
+interface AnalyzerViewProps {
+  camera: Camera;
+}
+
+type AnalysisMode = 'selection' | 'live' | 'image' | 'video';
+
+const SelectionCard: React.FC<{ title: string; description: string; imageUrl: string; onClick: () => void; }> = ({ title, description, imageUrl, onClick }) => (
+    <div
+        onClick={onClick}
+        className="group relative flex flex-col items-center justify-end p-6 bg-light-secondary dark:bg-gray-medium rounded-lg shadow-lg transition-all transform hover:scale-105 cursor-pointer h-64 overflow-hidden"
+    >
+        <div 
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-110"
+            style={{ backgroundImage: `url(${imageUrl})` }}
+        ></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+        <div className="relative text-white text-center z-10">
+            <h3 className="text-lg font-semibold">{title}</h3>
+            <p className="text-sm text-gray-300 mt-1">{description}</p>
+        </div>
+    </div>
+);
+
+
+const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
+  const [mode, setMode] = useState<AnalysisMode>('selection');
+
+  // States for Live Detection
+  const liveVideoRef = useRef<HTMLVideoElement>(null);
+  const liveCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [liveAnalysisError, setLiveAnalysisError] = useState<string | null>(null);
+  const [liveDetections, setLiveDetections] = useState<DetectionResult[]>([]);
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [isLiveStarting, setIsLiveStarting] = useState<boolean>(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [graphData, setGraphData] = useState<any[]>([]);
+  const liveAnalysisLoopRef = useRef<number | undefined>(undefined);
+  
+  // States for Uploader
+  const [image, setImage] = useState<string | null>(null);
+  const [video, setVideo] = useState<string | null>(null);
+  const [imageDetections, setImageDetections] = useState<DetectionResult[]>([]);
+  const [videoDetections, setVideoDetections] = useState<DetectionResult[]>([]);
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [isAnalyzingVideo, setIsAnalyzingVideo] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const uploadedVideoRef = useRef<HTMLVideoElement>(null);
+  const imageCanvasRef = useRef<HTMLCanvasElement>(null);
+  const videoCanvasRef = useRef<HTMLCanvasElement>(null);
+  const videoAnalysisLoopRef = useRef<number | undefined>(undefined);
+  const lastDetectionsRef = useRef<DetectionResult[]>([]);
+  const nextTrackIdRef = useRef<number>(1);
+
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === "class") {
+                setIsDarkMode((mutation.target as HTMLElement).classList.contains('dark'));
+            }
+        });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
+  // --- Generic Drawing Logic ---
+  const drawDetections = useCallback((
+      ctx: CanvasRenderingContext2D,
+      detections: DetectionResult[],
+      width: number,
+      height: number
+  ) => {
+      ctx.clearRect(0, 0, width, height);
+      detections.forEach(det => {
+          const color = stringToColor(det.label);
+          const label = det.trackId ? `${det.label} #${det.trackId}` : det.label;
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(det.x, det.y, det.width, det.height);
+          
+          ctx.font = 'bold 14px sans-serif';
+          const textWidth = ctx.measureText(label).width;
+          ctx.fillStyle = color;
+          ctx.fillRect(det.x, det.y, textWidth + 10, 20);
+          ctx.fillStyle = 'white';
+          ctx.fillText(label, det.x + 5, det.y + 15);
+      });
+  }, []);
+
+  // --- Live Detection Logic ---
+  const stopLiveAnalysis = useCallback(() => {
+    setIsAnalyzing(false);
+    if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
+    if (liveVideoRef.current && liveVideoRef.current.srcObject) {
+        const stream = liveVideoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        liveVideoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setIsPaused(false);
+  }, []);
+  
+  const analyzeLiveFrame = useCallback(async () => {
+    const video = liveVideoRef.current;
+    if (!video || video.paused || video.ended || video.videoWidth === 0) {
+        return;
+    }
+    
+    try {
+        const frameCanvas = document.createElement('canvas');
+        frameCanvas.width = video.videoWidth;
+        frameCanvas.height = video.videoHeight;
+        const ctx = frameCanvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(video, 0, 0, frameCanvas.width, frameCanvas.height);
+        const base64ImageData = frameCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        
+        const rawDetections = await detectObjects(base64ImageData);
+        
+        const scaledDetections: DetectionResult[] = (rawDetections || []).map((det: any, index: number) => ({
+            id: Date.now() + index,
+            label: det.label,
+            x: det.box.x * video.videoWidth,
+            y: det.box.y * video.videoHeight,
+            width: det.box.width * video.videoWidth,
+            height: det.box.height * video.videoHeight,
+        }));
+        
+        setLiveDetections(scaledDetections);
+        setLiveAnalysisError(null);
+
+        setGraphData(prevData => {
+            const newDataPoint = {
+                time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                'Total Objects': scaledDetections.length,
+            };
+            const updatedData = [...prevData, newDataPoint];
+            return updatedData.length > 30 ? updatedData.slice(1) : updatedData;
+        });
+    } catch (err) {
+        console.error("Analysis failed:", err);
+        const message = err instanceof Error ? err.message : "An unknown error occurred.";
+        setLiveAnalysisError(message);
+    } finally {
+        if (isAnalyzing && liveVideoRef.current && !liveVideoRef.current.paused) {
+           liveAnalysisLoopRef.current = window.setTimeout(analyzeLiveFrame, 5000);
+        }
+    }
+  }, [isAnalyzing]);
+
+  const startLiveCamera = useCallback(async () => {
+    if (isLiveStarting) return;
+
+    setLiveError(null);
+    setLiveAnalysisError(null);
+    setLiveDetections([]);
+    setGraphData([]);
+
+    if (liveVideoRef.current && liveVideoRef.current.srcObject) {
+      const stream = liveVideoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      liveVideoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+
+    setIsLiveStarting(true);
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: 1280, 
+                height: 720,
+                facingMode: facingMode
+            } 
+        });
+        const video = liveVideoRef.current;
+        if (video) {
+            video.srcObject = stream;
+            await video.play();
+
+            setIsCameraActive(true);
+            setIsPaused(false);
+            setIsAnalyzing(true);
+            if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
+            analyzeLiveFrame();
+        }
+    } catch (err) {
+        let message = 'Could not access camera. Please check permissions and try again.';
+        if (err instanceof DOMException) {
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                message = 'Camera access denied. To fix this, please allow camera permission in your browser settings. You can usually find this by clicking the camera icon in your address bar.';
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                message = 'No camera found on this device.';
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                message = 'The camera is already in use by another application. Please close other apps or tabs using the camera.';
+            }
+        }
+        setLiveError(message);
+        setIsCameraActive(false);
+        setIsAnalyzing(false);
+    } finally {
+      setIsLiveStarting(false);
+    }
+  }, [analyzeLiveFrame, facingMode, isLiveStarting]);
+
+  const handlePauseResumeToggle = () => {
+    const video = liveVideoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+        video.play();
+        setIsPaused(false);
+        if (isAnalyzing) {
+            if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
+            analyzeLiveFrame();
+        }
+    } else {
+        video.pause();
+        setIsPaused(true);
+        if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
+    }
+  };
+
+  const handleFlipCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  useEffect(() => {
+    // If the camera is active when the facing mode changes, restart the camera
+    // to apply the new setting.
+    if (isCameraActive) {
+      startLiveCamera();
+    }
+  }, [facingMode, isCameraActive, startLiveCamera]);
+
+  useEffect(() => {
+    if (isCameraActive && liveCanvasRef.current && liveVideoRef.current) {
+        const canvas = liveCanvasRef.current;
+        const video = liveVideoRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) drawDetections(ctx, liveDetections, video.videoWidth, video.videoHeight);
+    }
+  }, [liveDetections, isCameraActive, drawDetections]);
+  
+  // --- Uploader Logic ---
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                if (type === 'image') {
+                    setImage(event.target?.result as string);
+                    setImageDetections([]);
+                    setImageError(null);
+                } else {
+                    setVideo(event.target?.result as string);
+                    setVideoDetections([]);
+                    setVideoError(null);
+                    if(isAnalyzingVideo) stopVideoAnalysis();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+  
+  const analyzeImage = async () => {
+    if (!imageRef.current) return;
+    setIsAnalyzingImage(true);
+    setImageError(null);
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = imageRef.current.naturalWidth;
+        canvas.height = imageRef.current.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error("Could not get canvas context.");
+        ctx.drawImage(imageRef.current, 0, 0);
+        const base64ImageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        const rawDetections = await detectObjects(base64ImageData);
+        
+        const scaledDetections = rawDetections.map((det: any, index: number) => ({
+            id: Date.now() + index,
+            label: det.label,
+            x: det.box.x * imageRef.current!.naturalWidth,
+            y: det.box.y * imageRef.current!.naturalHeight,
+            width: det.box.width * imageRef.current!.naturalWidth,
+            height: det.box.height * imageRef.current!.naturalHeight,
+        }));
+
+        if (scaledDetections.length === 0) {
+            setImageError("No objects were detected in the image.");
+        }
+        setImageDetections(scaledDetections);
+
+    } catch (error) {
+        setImageError(error instanceof Error ? error.message : "An error occurred.");
+    } finally {
+        setIsAnalyzingImage(false);
+    }
+  };
+
+  const stopVideoAnalysis = useCallback(() => {
+        if (uploadedVideoRef.current) uploadedVideoRef.current.pause();
+        if (videoAnalysisLoopRef.current) clearTimeout(videoAnalysisLoopRef.current);
+        setIsAnalyzingVideo(false);
+    }, []);
+  
+  const updateTrackedObjects = useCallback((newDets: DetectionResult[], lastDets: DetectionResult[], w: number, h: number): DetectionResult[] => {
+    const MAX_DISTANCE = Math.sqrt(w * w + h * h) * 0.15;
+    const getCenter = (det: DetectionResult) => ({ cx: det.x + det.width / 2, cy: det.y + det.height / 2 });
+    const distance = (d1: DetectionResult, d2: DetectionResult) => Math.hypot(getCenter(d1).cx - getCenter(d2).cx, getCenter(d1).cy - getCenter(d2).cy);
+
+    const unmatched = [...lastDets];
+    const withIds: DetectionResult[] = [];
+
+    newDets.forEach((newDet) => {
+        let bestMatch: { index: number; dist: number } | null = null;
+        unmatched.forEach((lastDet, index) => {
+            if (lastDet.trackId && newDet.label === lastDet.label) {
+                const dist = distance(newDet, lastDet);
+                if (dist < MAX_DISTANCE && (!bestMatch || dist < bestMatch.dist)) {
+                    bestMatch = { index, dist };
+                }
+            }
+        });
+
+        if (bestMatch) {
+            const matchedDet = unmatched[bestMatch.index];
+            withIds.push({ ...newDet, trackId: matchedDet.trackId });
+            unmatched.splice(bestMatch.index, 1);
+        } else {
+            withIds.push({ ...newDet, trackId: nextTrackIdRef.current++ });
+        }
+    });
+    return withIds;
+  }, []);
+
+  const analyzeVideoFrame = useCallback(async () => {
+    const video = uploadedVideoRef.current;
+    if (!video || video.paused || video.ended) {
+        stopVideoAnalysis();
+        return;
+    }
+    try {
+        const frameCanvas = document.createElement('canvas');
+        frameCanvas.width = video.videoWidth;
+        frameCanvas.height = video.videoHeight;
+        const ctx = frameCanvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, frameCanvas.width, frameCanvas.height);
+        const base64 = frameCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        const rawDetections = await detectObjects(base64);
+        const scaled = (rawDetections || []).map((d: any, i: number) => ({
+            id: Date.now() + i, label: d.label,
+            x: d.box.x * video.videoWidth, y: d.box.y * video.videoHeight,
+            width: d.box.width * video.videoWidth, height: d.box.height * video.videoHeight
+        }));
+        
+        const tracked = updateTrackedObjects(scaled, lastDetectionsRef.current, video.videoWidth, video.videoHeight);
+        lastDetectionsRef.current = tracked;
+        setVideoDetections(tracked);
+        videoAnalysisLoopRef.current = window.setTimeout(analyzeVideoFrame, 5000);
+    } catch (err) {
+        setVideoError(err instanceof Error ? err.message : "An error occurred.");
+        stopVideoAnalysis();
+    }
+  }, [stopVideoAnalysis, updateTrackedObjects]);
+
+  const handleVideoAnalysisToggle = () => {
+    if (isAnalyzingVideo) {
+        stopVideoAnalysis();
+    } else {
+        const video = uploadedVideoRef.current;
+        if (!video) return;
+        video.play();
+        setIsAnalyzingVideo(true);
+        setVideoError(null);
+        lastDetectionsRef.current = [];
+        nextTrackIdRef.current = 1;
+        if (videoAnalysisLoopRef.current) clearTimeout(videoAnalysisLoopRef.current);
+        analyzeVideoFrame();
+    }
+  };
+
+  useEffect(() => {
+    if (imageDetections.length > 0 && imageCanvasRef.current && imageRef.current) {
+        const canvas = imageCanvasRef.current;
+        const imageEl = imageRef.current;
+        const setupCanvas = () => {
+            canvas.width = imageEl.naturalWidth;
+            canvas.height = imageEl.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) drawDetections(ctx, imageDetections, canvas.width, canvas.height);
+        };
+        if (imageEl.complete) setupCanvas();
+        else imageEl.onload = setupCanvas;
+    }
+  }, [imageDetections, drawDetections]);
+
+  useEffect(() => {
+    const video = uploadedVideoRef.current;
+    const canvas = videoCanvasRef.current;
+    if (video && canvas && videoDetections) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) drawDetections(ctx, videoDetections, video.videoWidth, video.videoHeight);
+    }
+  }, [videoDetections, drawDetections]);
+
+  // --- Component Lifecycle & Cleanup ---
+  const handleModeChange = (newMode: AnalysisMode) => {
+    // Stop any active analysis before switching
+    stopLiveAnalysis();
+    stopVideoAnalysis();
+    setMode(newMode);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopLiveAnalysis();
+      stopVideoAnalysis();
+    };
+  }, [stopLiveAnalysis, stopVideoAnalysis]);
+
+
+  // --- Render Logic ---
+  const renderHeader = (title: string) => (
+    <div className="p-4 border-b border-light-border dark:border-gray-light flex items-center gap-4">
+      <button onClick={() => handleModeChange('selection')} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-light">
+          <ChevronLeftIcon className="w-6 h-6" />
+      </button>
+      <h3 className="text-xl font-bold">{title}</h3>
+    </div>
+  );
+  
+  const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: number; color: string }> = ({ icon, label, value, color }) => (
+    <div className="bg-gray-100 dark:bg-gray-dark p-3 rounded-lg flex items-center space-x-3">
+        <div className={`p-2 rounded-full ${color}`}>
+            {icon}
+        </div>
+        <div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{label}</div>
+            <div className="text-xl font-bold">{value}</div>
+        </div>
+    </div>
+);
+  
+  const renderObjectStats = (detections: DetectionResult[], isAnalyzing: boolean) => {
+      const objectCounts = detections.reduce((acc, det) => {
+          acc[det.label] = (acc[det.label] || 0) + 1;
+          return acc;
+      }, {} as Record<string, number>);
+
+      return (
+          <div className="flex flex-col gap-3">
+              <h3 className="text-lg font-bold border-b border-light-border dark:border-gray-light pb-2">Analysis Results</h3>
+              <StatCard icon={<TagIcon className="w-6 h-6 text-white"/>} label="Total Objects Detected" value={detections.length} color="bg-blue-500"/>
+              <div className="text-sm mt-2 space-y-1 overflow-y-auto pr-2 max-h-48">
+                {Object.entries(objectCounts).length > 0 ? (
+                    Object.entries(objectCounts).map(([label, count]) => (
+                        <div key={label} className="flex justify-between items-center bg-gray-100 dark:bg-gray-dark p-1.5 rounded">
+                            <span className="font-medium capitalize flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: stringToColor(label) }}></span>
+                                {label}
+                            </span>
+                            <span className="font-bold bg-gray-200 dark:bg-gray-light px-2 rounded">{count}</span>
+                        </div>
+                    ))
+                ) : (
+                     <p className="text-gray-400 dark:text-gray-500 text-center pt-4">{isAnalyzing ? 'Searching...' : 'No objects detected.'}</p>
+                )}
+            </div>
+          </div>
+      );
+  };
+
+  if (mode === 'selection') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+        <ShieldCheckIcon className="w-24 h-24 text-blue-500 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">{camera.name}</h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">Perform real-time analysis or analyze media files for object detection.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+             <SelectionCard 
+                title="Live Object Detection"
+                description="Use your device's camera for real-time analysis."
+                imageUrl="https://images.unsplash.com/photo-1517036338519-3c363941eb4a?q=80&w=1974&auto=format&fit=crop"
+                onClick={() => handleModeChange('live')}
+             />
+             <SelectionCard 
+                title="Analyze Image"
+                description="Upload a static image to detect objects."
+                imageUrl="https://images.unsplash.com/photo-1593348512330-8523d42c0a4f?q=80&w=2070&auto=format&fit=crop"
+                onClick={() => handleModeChange('image')}
+             />
+             <SelectionCard 
+                title="Analyze Video"
+                description="Upload a video file for object detection."
+                imageUrl="https://images.unsplash.com/photo-1579895429487-6750342921db?q=80&w=1968&auto=format&fit=crop"
+                onClick={() => handleModeChange('video')}
+             />
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'live') {
+    const axisStrokeColor = isDarkMode ? '#a0aec0' : '#4a5568';
+    const gridStrokeColor = isDarkMode ? '#4a5568' : '#e2e8f0';
+    const tooltipContentStyle = { backgroundColor: isDarkMode ? '#2d3748' : '#ffffff', border: `1px solid ${gridStrokeColor}`, borderRadius: '0.5rem' };
+    
+    return (
+        <div className="h-full flex flex-col">
+            {renderHeader("Live Object Detection")}
+            <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
+                <div className="flex-grow flex flex-col bg-black relative overflow-hidden items-center justify-center">
+                   {!isCameraActive ? (
+                        <div className="text-center p-4">
+                            {liveError ? (
+                                <div className="flex flex-col items-center justify-center text-red-400">
+                                    <XCircleIcon className="w-16 h-16 mb-4" />
+                                    <h3 className="text-xl font-bold">Camera Error</h3>
+                                    <p className="max-w-md">{liveError}</p>
+                                    <button 
+                                        onClick={startLiveCamera}
+                                        disabled={isLiveStarting}
+                                        className="mt-4 flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-blue-light hover:bg-brand-blue rounded-md transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                    >
+                                        {isLiveStarting ? 'Starting...' : 'Try Again'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center">
+                                    <VideoCameraIcon className="w-24 h-24 text-gray-500 mb-4" />
+                                    <h3 className="text-xl font-bold text-white mb-2">Live Object Detection</h3>
+                                    <p className="text-gray-400 mb-6">Start your camera to begin real-time analysis.</p>
+                                    <button 
+                                        onClick={startLiveCamera}
+                                        disabled={isLiveStarting}
+                                        className="flex items-center gap-2 px-4 py-2 font-semibold text-white bg-accent-green hover:bg-green-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                    >
+                                        <VideoCameraIcon className="w-5 h-5"/>
+                                        {isLiveStarting ? 'Starting...' : 'Start Camera'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            <video ref={liveVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                            <canvas ref={liveCanvasRef} className="absolute top-0 left-0 w-full h-full" />
+                            
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/50 p-3 rounded-xl backdrop-blur-sm">
+                                <button 
+                                    onClick={handlePauseResumeToggle} 
+                                    className="text-white p-2 rounded-full hover:bg-white/20 transition-colors"
+                                    title={isPaused ? "Resume" : "Pause"}
+                                >
+                                    {isPaused ? <PlayIcon className="w-6 h-6" /> : <PauseIcon className="w-6 h-6" />}
+                                </button>
+                                <button 
+                                    onClick={handleFlipCamera} 
+                                    className="text-white p-2 rounded-full hover:bg-white/20 transition-colors"
+                                    title="Flip Camera"
+                                >
+                                    <CameraSwitchIcon className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            {isAnalyzing && !isPaused && <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">ANALYZING...</div>}
+                            {liveAnalysisError && (
+                                <div className="absolute bottom-20 left-4 right-4 bg-red-900/80 border border-red-500 text-white p-3 rounded-lg"><p className="font-bold">Analysis Failed:</p><p className="text-xs">{liveAnalysisError}</p></div>
+                            )}
+                        </>
+                    )}
+                </div>
+                <div className="w-full md:w-80 bg-light-secondary dark:bg-gray-medium border-t md:border-t-0 md:border-l border-light-border dark:border-gray-light p-4 flex flex-col space-y-4">
+                    {renderObjectStats(liveDetections, isAnalyzing)}
+                    <div className="flex-grow flex flex-col min-h-[150px]">
+                        <h4 className="text-md font-semibold mt-2 mb-2">Detection Trend</h4>
+                        {isCameraActive && graphData.length > 1 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={graphData} margin={{ top: 5, right: 20, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={gridStrokeColor} />
+                                <XAxis dataKey="time" stroke={axisStrokeColor} fontSize={10} tick={{ fill: axisStrokeColor }} />
+                                <YAxis allowDecimals={false} stroke={axisStrokeColor} fontSize={10} tick={{ fill: axisStrokeColor }} />
+                                <Tooltip contentStyle={tooltipContentStyle} wrapperStyle={{ fontSize: '12px' }}/>
+                                <Legend wrapperStyle={{fontSize: "12px"}}/>
+                                <Line type="monotone" dataKey="Total Objects" stroke="#38b2ac" strokeWidth={2} dot={false} />
+                            </LineChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex-grow flex items-center justify-center text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-dark rounded-md"><p>{isCameraActive ? 'Collecting data...' : 'Start camera to see trend'}</p></div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+  }
+
+  if (mode === 'image' || mode === 'video') {
+    const isImageMode = mode === 'image';
+    const currentIsAnalyzing = isImageMode ? isAnalyzingImage : isAnalyzingVideo;
+
+    return (
+        <div className="h-full flex flex-col">
+            {renderHeader(isImageMode ? "Image Object Analysis" : "Video Object Analysis")}
+            <div className="flex-grow p-6 space-y-6 overflow-y-auto">
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-light rounded-lg p-6 text-center relative">
+                    <ArrowUpTrayIcon className="w-12 h-12 mx-auto text-gray-400"/>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Drag & drop or click to select a new {isImageMode ? 'image' : 'video'}</p>
+                    <input type="file" accept={isImageMode ? "image/*" : "video/*"} onChange={(e) => handleFileChange(e, mode)} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"/>
+                </div>
+
+                {(isImageMode ? image : video) && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-2">
+                            <div className="relative border rounded-lg overflow-hidden bg-gray-900 flex justify-center items-center">
+                                {isImageMode ? (
+                                    <>
+                                        <img ref={imageRef} src={image!} alt="Upload preview" className={`max-w-full max-h-[400px] object-contain transition-opacity ${isAnalyzingImage ? 'opacity-30' : ''}`} />
+                                        <canvas ref={imageCanvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
+                                        {isAnalyzingImage && (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white">
+                                                <ArrowPathIcon className="w-12 h-12 animate-spin mb-2" />
+                                                <p className="font-semibold">Analyzing...</p>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <video ref={uploadedVideoRef} src={video!} controls className="max-w-full max-h-[400px] mx-auto" onEnded={stopVideoAnalysis}/>
+                                        <canvas ref={videoCanvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
+                                        {isAnalyzingVideo && <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">ANALYZING...</div>}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-4">
+                            <div className="flex-grow space-y-4">
+                                {(isImageMode ? imageError : videoError) && (
+                                    <div className="bg-red-500/10 text-red-500 dark:text-red-400 p-3 rounded-md text-sm font-medium">
+                                        <strong>Analysis Failed:</strong> {isImageMode ? imageError : videoError}
+                                    </div>
+                                )}
+                                {renderObjectStats(isImageMode ? imageDetections : videoDetections, currentIsAnalyzing)}
+                            </div>
+                            <button
+                                onClick={isImageMode ? analyzeImage : handleVideoAnalysisToggle}
+                                disabled={isImageMode ? isAnalyzingImage : false}
+                                className="w-full bg-brand-blue hover:bg-brand-blue-light text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                {isImageMode ? (isAnalyzingImage ? 'Analyzing...' : 'Analyze Image') : (isAnalyzingVideo ? 'Stop Analysis' : 'Analyze Video')}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+  }
+
+  return null;
+};
+
+export default AnalyzerView;
