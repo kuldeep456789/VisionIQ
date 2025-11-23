@@ -274,7 +274,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
         if (isCameraActive) {
             startLiveCamera();
         }
-    }, [facingMode, isCameraActive, startLiveCamera]);
+        // We only want this to run when facingMode changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [facingMode]);
 
     useEffect(() => {
         if (isCameraActive && liveCanvasRef.current && liveVideoRef.current) {
