@@ -52,9 +52,9 @@ export interface CameraData {
 }
 
 export interface HistoricalDataPoint {
-    date: string;
-    crowd_count: number;
-    alerts: number;
+  date: string;
+  crowd_count: number;
+  alerts: number;
 }
 
 export interface DetectionResult {
@@ -65,4 +65,11 @@ export interface DetectionResult {
   height: number;
   label: string;
   trackId?: number;
+}
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  profilePicture?: string;
 }
