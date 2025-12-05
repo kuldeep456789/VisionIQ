@@ -1,85 +1,95 @@
-# VISIONIQ AI Dashboard 🛡️✨
+# VISIONIQ - AI-Powered Video Analytics Platform
 
-Welcome to VISIONIQ! 🚀 We're turning ordinary cameras into smart, AI-powered guardians. This project is all about making advanced video analysis easy, accessible, and insightful for everyone.
+VISIONIQ is a comprehensive video analytics solution designed to transform standard video feeds into actionable intelligence. By leveraging state-of-the-art computer vision models, the platform provides real-time object detection and analysis, making it suitable for a wide range of security and operational applications.
 
-## What is VISIONIQ?
+## Real-World Applications
 
-In an increasingly complex world, security and operational awareness are paramount. Traditional surveillance systems often require constant manual monitoring, which is inefficient and prone to human error. VISIONIQ solves this by transforming passive video streams into active, intelligent data sources.
+This platform is built to solve practical problems across various industries:
 
-Our mission is to provide an intuitive and powerful tool that leverages cutting-edge AI to enhance safety, optimize operations, and deliver actionable insights. By running complex vision tasks directly in the browser, VISIONIQ democratizes access to advanced AI capabilities without requiring specialized hardware.
+*   **Security & Surveillance**: Automate the monitoring of restricted areas by detecting unauthorized personnel or vehicles in real-time, reducing the need for constant manual supervision.
+*   **Retail Analytics**: Analyze foot traffic patterns and customer behavior in stores to optimize layout and staffing, ultimately improving the customer experience.
+*   **Industrial Safety**: Monitor manufacturing floors to ensure safety compliance, such as detecting workers entering hazardous zones or ensuring proper protective gear is worn.
+*   **Smart City Management**: Assist in traffic flow analysis and crowd management during large events to enhance public safety and urban planning.
 
-### In Simple Terms...
-Imagine a security guard who can see everything at once, never gets tired, and can instantly tell you what's happening. That's VISIONIQ! It watches your camera feeds and points out important things, like how many people are in a room or if someone enters a restricted area.
+## Key Features
 
-## Core Features 🚀
+*   **Real-Time Detection**: Processes live video streams with low latency to identify objects and events as they happen.
+*   **Secure Authentication**: Robust user management system ensures that only authorized personnel can access sensitive data and configuration settings.
+*   **Interactive Dashboard**: A clean, intuitive interface that visualizes detection data, providing clear insights at a glance.
+*   **Scalable Architecture**: Built with a modular design that allows for easy expansion and integration with existing camera infrastructure.
 
--   **📊 Live Monitoring Dashboard:** Get a real-time overview of all cameras with key metrics like total people monitored and active alerts.
--   **📹 Advanced Camera Feeds:** View individual camera streams with rich data overlays, including:
-    -   **Crowd & Density Analysis:** Monitor the number of people and their density in real-time.
-    -   **Heatmap Visualization:** Instantly see where people spend the most time.
-    -   **Customizable Zones:** Draw virtual boundaries to monitor specific areas for special events.
--   **🤖 AI-Powered Analysis:** Use your device's camera or upload media files for advanced object detection. Identify and label items (like people or cars) as they appear.
--   **🚨 Dynamic Alert System:** Receive instant notifications for events like intrusion, overcrowding, or loitering. Alerts are color-coded by severity for quick assessment.
--   **📈 Historical Analytics:** Travel back in time! Explore interactive charts to see crowd trends and alert patterns, helping you make smarter decisions.
--   **🎨 Responsive & Customizable UI:** A modern, clean interface that looks great on any device. 
-    -   Switch between light and dark modes to suit your preference!
-    -   **👤 Personalize Your Profile:** Make the dashboard your own by uploading a custom profile picture or choosing a fun emoji avatar in the settings.
+## Technology Stack
 
-## Privacy & Security 🔒
+The project utilizes a modern, robust technology stack to ensure performance and maintainability:
 
-Your privacy is a top priority. For the **On-Site Analysis** feature, all AI processing happens directly in your browser. This means your camera, image, and video data are never sent to a server, ensuring your information remains completely private and secure on your local device.
+### Frontend
+*   **React**: For building a dynamic and responsive user interface.
+*   **Vite**: Ensures fast build times and a smooth development experience.
+*   **TypeScript**: Adds type safety to the codebase, reducing errors and improving code quality.
+*   **TailwindCSS**: Provides a utility-first approach to styling for a custom, professional look.
 
-## Who is VISIONIQ for? 🤔
+### Backend
+*   **Flask**: A lightweight and flexible Python web framework for serving the API and handling requests.
+*   **SQLAlchemy**: ORM for efficient and secure database interactions.
+*   **YOLOv8**: The latest iteration of the You Only Look Once algorithm, delivering state-of-the-art accuracy and speed in object detection.
+*   **OpenCV**: Used for advanced image processing and video stream manipulation.
 
--   **Operations Managers:** Monitor on-site activity and ensure process compliance.
--   **Small Business Owners:** Monitor foot traffic, identify peak hours, and enhance security without a dedicated team.
--   **Event Managers:** Ensure crowd safety, manage flow, and prevent overcrowding at venues.
--   **Developers & Tech Enthusiasts:** Explore the power of browser-based AI vision and build upon a powerful, modern tech stack.
+## Getting Started
 
-## Technology Stack 💻
+Follow these steps to set up the project locally for development or testing.
 
--   **⚛️ Frontend Framework:** React with TypeScript
--   **💨 Styling:** Tailwind CSS
--   **🧠 AI & Vision Processing:** Google Gemini API
--   **📊 Data Visualization:** Recharts
--   **🎨 Icons:** Heroicons
+### Prerequisites
+*   **Node.js** (v18 or higher)
+*   **Python** (v3.10 or higher)
+*   **Git**
 
-## Getting Started in 5 Easy Steps 🏁
+### Installation
 
-1.  **Login:** Access the app through the secure login page.
-2.  **Explore:** Use the sidebar to navigate between the main Dashboard, Analytics, and Settings pages.
-3.  **Monitor Live:** On the Dashboard, click a remote camera to see its live feed and data overlays.
-4.  **Perform AI Analysis:** Select "On-Site Analysis." Choose to either start your live camera or upload an image/video to begin object detection.
-5.  **Review Analytics:** Visit the Analytics page to see historical trends for crowd counts and alerts.
+1.  **Clone the Repository**
+    ```bash
+    git clone <repository-url>
+    cd VISIONIQ
+    ```
 
-## Troubleshooting 🛠️
+2.  **Backend Setup**
+    Navigate to the backend directory and set up the Python environment.
+    ```bash
+    cd backend
+    python -m venv .venv
+    # Activate virtual environment:
+    # Windows: .venv\Scripts\activate
+    # Mac/Linux: source .venv/bin/activate
+    pip install -r requirements.txt
+    ```
+    Create a `.env` file in the `backend` directory with your configuration (e.g., `DATABASE_URL`, `SECRET_KEY`).
 
-**Problem: Camera is not working or "Permission Denied" error appears.**
+3.  **Frontend Setup**
+    Navigate to the root directory (or frontend directory if separate) and install dependencies.
+    ```bash
+    cd ..
+    npm install
+    ```
+    Create a `.env` file in the root directory if required for frontend keys (e.g., API endpoints).
 
-This usually happens when the browser is blocked from accessing the camera.
+### Running the Application
 
-**Solution:**
-1.  Look for a **camera icon** in your browser's address bar (usually on the right side).
-2.  Click the icon. A dialog box will appear.
-3.  Ensure that **"Always allow [this site] to access your camera"** is selected.
-4.  Reload the page. The camera should now work correctly.
+1.  **Start the Backend Server**
+    In the backend directory with the virtual environment activated:
+    ```bash
+    python app.py
+    ```
+    The server will start on `http://localhost:5000`.
 
-## Our Vision for the Future 🔮
+2.  **Start the Frontend Development Server**
+    In the root directory:
+    ```bash
+    npm run dev
+    ```
+    Access the application at `http://localhost:5173`.
 
-VISIONIQ is just getting started! We're dreaming up new features to make it even more powerful, including:
+## API Reference
 
--   **Sound & Audio Analysis:** Detecting events like glass breaking or alarms.
--   **Predictive Alerts:** Using historical data to anticipate potential issues before they happen.
--   **Deeper Integrations:** Connecting with smart home devices, messaging apps, and more.
-
-## How to Contribute ❤️
-
-We welcome contributions from the community! Whether it's a bug fix, a new feature, or documentation improvements, your help is appreciated.
-
-1.  **Fork the repository.**
-2.  **Create a new branch** for your feature (`git checkout -b feature/AmazingFeature`).
-3.  **Commit your changes** (`git commit -m 'Add some AmazingFeature'`).
-4.  **Push to the branch** (`git push origin feature/AmazingFeature`).
-5.  **Open a Pull Request.**
-
-We value your feedback! Have an idea? Found a bug? Please feel free to raise an issue.
+*   `GET /health`: Check the status of the API and model loading.
+*   `POST /api/register`: Register a new user account.
+*   `POST /api/login`: Authenticate a user and receive an access token.
+*   `POST /detect`: Submit an image frame for object detection.
