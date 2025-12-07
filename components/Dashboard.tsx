@@ -4,7 +4,6 @@ import type { Camera, CameraData, Alert } from '../types';
 import CameraView from './CameraView';
 import AlertsPanel from './AlertsPanel';
 import AnalyzerView from './AnalyzerView';
-import { VideoCameraIcon } from './icons/VideoCameraIcon';
 
 
 const PPE_CAMERA_ID = 'ppe-detection';
@@ -151,7 +150,7 @@ const Dashboard: React.FC = () => {
       <div className="lg:col-span-8 flex flex-col gap-6">
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <DashboardStatCard icon={<VideoCameraIcon className="w-6 h-6 text-white" />} label="Total Cameras" value={cameras.length + 1} color="bg-blue-500" />
+          <DashboardStatCard icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-white"><path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9A2.25 2.25 0 0 0 13.5 5.25h-9A2.25 2.25 0 0 0 2.25 7.5v9A2.25 2.25 0 0 0 4.5 18.75Z" /></svg>} label="Total Cameras" value={cameras.length + 1} color="bg-blue-500" />
           <DashboardStatCard icon={null} label="Active Alerts" value={alerts.length} color="bg-accent-red" />
           <DashboardStatCard icon={null} label="Total People Monitored" value={totalPeople} color="bg-accent-yellow" />
         </div>
@@ -201,7 +200,9 @@ const Dashboard: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <VideoCameraIcon className="w-5 h-5" />
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9A2.25 2.25 0 0 0 13.5 5.25h-9A2.25 2.25 0 0 0 2.25 7.5v9A2.25 2.25 0 0 0 4.5 18.75Z" />
+                      </svg>
                       <span className="font-semibold">{cam.name}</span>
                     </div>
                     <div className={`px-2 py-0.5 rounded text-xs font-bold ${isOnline ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>

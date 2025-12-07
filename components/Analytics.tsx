@@ -8,19 +8,19 @@ const Analytics: React.FC = () => {
   const [data, setData] = useState<HistoricalDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
-  
+
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
-        mutations.forEach(function(mutation) {
-            if (mutation.attributeName === "class") {
-                const newIsDarkMode = (mutation.target as HTMLElement).classList.contains('dark');
-                setIsDarkMode(newIsDarkMode);
-            }
-        });
+      mutations.forEach(function (mutation) {
+        if (mutation.attributeName === "class") {
+          const newIsDarkMode = (mutation.target as HTMLElement).classList.contains('dark');
+          setIsDarkMode(newIsDarkMode);
+        }
+      });
     });
 
     observer.observe(document.documentElement, {
-        attributes: true
+      attributes: true
     });
 
     return () => observer.disconnect();
@@ -39,7 +39,7 @@ const Analytics: React.FC = () => {
   if (loading) {
     return <div className="text-center p-10">Loading analytical data...</div>;
   }
-  
+
   const formattedData = data.map(d => ({
     ...d,
     date: new Date(d.date).toLocaleString('en-US', { month: 'short', day: 'numeric' })
@@ -48,8 +48,8 @@ const Analytics: React.FC = () => {
   const axisStrokeColor = isDarkMode ? '#a0aec0' : '#4a5568';
   const gridStrokeColor = isDarkMode ? '#4a5568' : '#e2e8f0';
   const tooltipContentStyle = {
-      backgroundColor: isDarkMode ? '#2d3748' : '#ffffff',
-      border: `1px solid ${gridStrokeColor}`
+    backgroundColor: isDarkMode ? '#2d3748' : '#ffffff',
+    border: `1px solid ${gridStrokeColor}`
   };
 
   return (

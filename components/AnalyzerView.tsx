@@ -2,16 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Camera, DetectionResult } from '../types';
 import { detectObjects } from '../services/detectionService';
-import { ShieldCheckIcon } from './icons/ShieldCheckIcon';
-import { XCircleIcon } from './icons/XCircleIcon';
-import { VideoCameraIcon } from './icons/VideoCameraIcon';
-import { TagIcon } from './icons/TagIcon';
-import { ArrowPathIcon } from './icons/ArrowPathIcon';
-import { ArrowUpTrayIcon } from './icons/ArrowUpTrayIcon';
-import { ChevronLeftIcon } from './icons/ChevronLeftIcon';
-import { PlayIcon } from './icons/PlayIcon';
-import { PauseIcon } from './icons/PauseIcon';
-import { CameraSwitchIcon } from './icons/CameraSwitchIcon';
 
 // Helper to generate a consistent color from a string label
 const stringToColor = (str: string) => {
@@ -474,7 +464,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
     const renderHeader = (title: string) => (
         <div className="p-4 border-b border-light-border dark:border-gray-light flex items-center gap-4">
             <button onClick={() => handleModeChange('selection')} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-light">
-                <ChevronLeftIcon className="w-6 h-6" />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                </svg>
             </button>
             <h3 className="text-xl font-bold">{title}</h3>
         </div>
@@ -501,7 +493,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
         return (
             <div className="flex flex-col gap-3">
                 <h3 className="text-lg font-bold border-b border-light-border dark:border-gray-light pb-2">Analysis Results</h3>
-                <StatCard icon={<TagIcon className="w-6 h-6 text-white" />} label="Total Objects Detected" value={detections.length} color="bg-blue-500" />
+                <StatCard icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-white"><path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>} label="Total Objects Detected" value={detections.length} color="bg-blue-500" />
                 <div className="text-sm mt-2 space-y-1 overflow-y-auto pr-2 max-h-48">
                     {Object.entries(objectCounts).length > 0 ? (
                         Object.entries(objectCounts).map(([label, count]) => (
@@ -524,7 +516,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
     if (mode === 'selection') {
         return (
             <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                <ShieldCheckIcon className="w-24 h-24 text-blue-500 mb-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-24 h-24 text-blue-500 mb-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                </svg>
                 <h2 className="text-2xl font-bold mb-2">{camera.name}</h2>
                 <p className="text-gray-500 dark:text-gray-400 mb-8">Perform real-time analysis or analyze media files for object detection.</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
@@ -565,7 +559,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                             <div className="text-center p-4">
                                 {liveError ? (
                                     <div className="flex flex-col items-center justify-center text-red-400">
-                                        <XCircleIcon className="w-16 h-16 mb-4" />
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 mb-4">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
                                         <h3 className="text-xl font-bold">Camera Error</h3>
                                         <p className="max-w-md">{liveError}</p>
                                         <button
@@ -578,7 +574,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center">
-                                        <VideoCameraIcon className="w-24 h-24 text-gray-500 mb-4" />
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-24 h-24 text-gray-500 mb-4">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9A2.25 2.25 0 0 0 13.5 5.25h-9A2.25 2.25 0 0 0 2.25 7.5v9A2.25 2.25 0 0 0 4.5 18.75Z" />
+                                        </svg>
                                         <h3 className="text-xl font-bold text-white mb-2">Live Object Detection</h3>
                                         <p className="text-gray-400 mb-6">Start your camera to begin real-time analysis.</p>
                                         <button
@@ -586,7 +584,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                                             disabled={isLiveStarting}
                                             className="flex items-center gap-2 px-4 py-2 font-semibold text-white bg-accent-green hover:bg-green-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-wait"
                                         >
-                                            <VideoCameraIcon className="w-5 h-5" />
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9A2.25 2.25 0 0 0 13.5 5.25h-9A2.25 2.25 0 0 0 2.25 7.5v9A2.25 2.25 0 0 0 4.5 18.75Z" />
+                                            </svg>
                                             {isLiveStarting ? 'Starting...' : 'Start Camera'}
                                         </button>
                                     </div>
@@ -603,14 +603,25 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                                         className="text-white p-2 rounded-full hover:bg-white/20 transition-colors"
                                         title={isPaused ? "Resume" : "Pause"}
                                     >
-                                        {isPaused ? <PlayIcon className="w-6 h-6" /> : <PauseIcon className="w-6 h-6" />}
+                                        {isPaused ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+                                            </svg>
+                                        )}
                                     </button>
                                     <button
                                         onClick={handleFlipCamera}
                                         className="text-white p-2 rounded-full hover:bg-white/20 transition-colors"
                                         title="Flip Camera"
                                     >
-                                        <CameraSwitchIcon className="w-6 h-6" />
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                                        </svg>
                                     </button>
                                 </div>
 
@@ -655,7 +666,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                 {renderHeader(isImageMode ? "Image Object Analysis" : "Video Object Analysis")}
                 <div className="flex-grow p-6 space-y-6 overflow-y-auto">
                     <div className="border-2 border-dashed border-gray-300 dark:border-gray-light rounded-lg p-6 text-center relative">
-                        <ArrowUpTrayIcon className="w-12 h-12 mx-auto text-gray-400" />
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mx-auto text-gray-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
                         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Drag & drop or click to select a new {isImageMode ? 'image' : 'video'}</p>
                         <input type="file" accept={isImageMode ? "image/*" : "video/*"} onChange={(e) => handleFileChange(e, mode)} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
                     </div>
@@ -670,7 +683,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                                             <canvas ref={imageCanvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
                                             {isAnalyzingImage && (
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white">
-                                                    <ArrowPathIcon className="w-12 h-12 animate-spin mb-2" />
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 animate-spin mb-2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                                    </svg>
                                                     <p className="font-semibold">Analyzing...</p>
                                                 </div>
                                             )}
