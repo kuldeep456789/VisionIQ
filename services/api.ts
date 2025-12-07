@@ -56,28 +56,23 @@ const mockApi = {
       exitCount: Math.floor(Math.random() * 500),
     }), 300));
   },
-  
+
   fetchNewAlert: async (): Promise<Alert | null> => {
     return new Promise(resolve => setTimeout(() => {
-        // Only generate an alert sometimes
-        if (Math.random() > 0.7) {
-            resolve(generateRandomAlert());
-        } else {
-            resolve(null);
-        }
+      resolve(null);
     }, 1000));
   },
 
   fetchHistoricalData: async (): Promise<HistoricalDataPoint[]> => {
     const data: HistoricalDataPoint[] = [];
     for (let i = 29; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        data.push({
-            date: date.toISOString().split('T')[0],
-            crowd_count: Math.floor(Math.random() * 200) + 50,
-            alerts: Math.floor(Math.random() * 15),
-        });
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      data.push({
+        date: date.toISOString().split('T')[0],
+        crowd_count: Math.floor(Math.random() * 200) + 50,
+        alerts: Math.floor(Math.random() * 15),
+      });
     }
     return new Promise(resolve => setTimeout(() => resolve(data), 800));
   }

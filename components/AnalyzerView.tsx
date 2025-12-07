@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Camera, DetectionResult } from '../types';
-import { detectObjects } from '../services/gemini';
+import { detectObjects } from '../services/detectionService';
 import { ShieldCheckIcon } from './icons/ShieldCheckIcon';
 import { XCircleIcon } from './icons/XCircleIcon';
 import { VideoCameraIcon } from './icons/VideoCameraIcon';

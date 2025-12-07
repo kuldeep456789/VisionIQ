@@ -4,8 +4,8 @@ import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import LoginPage from './components/LoginPage';
-import { Bars3Icon } from './components/icons/Bars3Icon';
-import { ArrowRightOnRectangleIcon } from './components/icons/ArrowRightOnRectangleIcon';
+
+
 import { User } from './types';
 
 type View = 'dashboard' | 'analytics' | 'settings';
@@ -58,7 +58,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-light-bg dark:bg-gray-900 font-sans text-light-text dark:text-gray-200">
-      {/* Backdrop for mobile */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-20 md:hidden"
@@ -74,9 +73,7 @@ const App: React.FC = () => {
       <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
         <header className="flex items-center justify-between p-4 bg-light-secondary dark:bg-gray-medium border-b border-light-border dark:border-gray-light shadow-sm">
           <div className="flex items-center space-x-3">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-light">
-              <Bars3Icon className="h-6 w-6" />
-            </button>
+
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-sm hidden sm:inline">Welcome, {user.name}</span>
@@ -88,7 +85,7 @@ const App: React.FC = () => {
               </div>
             )}
             <button onClick={handleLogout} title="Sign Out" className="flex items-center gap-2 px-3 py-2 text-sm font-semibold bg-gray-200 dark:bg-gray-light hover:bg-red-200 dark:hover:bg-accent-red rounded-md transition-colors">
-              <ArrowRightOnRectangleIcon className="w-5 h-5" />
+              Sign Out
             </button>
           </div>
         </header>

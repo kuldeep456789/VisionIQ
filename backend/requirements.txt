@@ -2,8 +2,7 @@ flask
 flask-cors
 opencv-python
 ultralytics
-numpy
-flask-sqlalchemy
-psycopg2-binary
+python-dotenv
+supabase
 python-dotenv
 werkzeug

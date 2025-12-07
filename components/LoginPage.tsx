@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheckIcon } from './icons/ShieldCheckIcon';
+
 import { authService } from '../services/authService';
 import { User } from '../types';
 
@@ -39,9 +39,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-dark">
             <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-medium rounded-2xl shadow-xl">
                 <div className="text-center">
-                    <div className="flex justify-center mb-4">
-                        <ShieldCheckIcon className="h-12 w-12 text-blue-500" />
-                    </div>
+
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                         {isRegistering ? 'Create an Account' : 'Welcome to VISIONIQ'}
                     </h2>
