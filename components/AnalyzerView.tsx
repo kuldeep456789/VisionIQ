@@ -554,11 +554,11 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
     if (mode === 'selection') {
         return (
             <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-24 h-24 text-blue-500 mb-4">
+                {/* <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-24 h-24 text-blue-500 mb-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-                </svg>
+                </svg> */}
                 <h2 className="text-2xl font-bold mb-2">{camera.name}</h2>
-                <p className="text-gray-500 dark:text-gray-400 mb-8">Perform real-time analysis or analyze media files for object detection.</p>
+                {/* <p className="text-gray-500 dark:text-gray-400 mb-8">Perform real-time analysis or analyze media files for object detection.</p> */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
                     <SelectionCard
                         title="Live Object Detection"
@@ -689,7 +689,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                                         </svg>
                                     </button>
-                                </div >
+                                </div>
                             </>
                         )}
 
@@ -704,27 +704,31 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                             <p>Video Size: {liveVideoRef.current?.videoWidth}x{liveVideoRef.current?.videoHeight}</p>
                             <p>ReadyState: {liveVideoRef.current?.readyState}</p>
                         </div>
+                    </div>
+                    <div className="w-full md:w-80 bg-white dark:bg-gray-800 border-t md:border-t-0 md:border-l border-light-border dark:border-gray-light p-4 flex flex-col h-full overflow-hidden">
                         {renderObjectStats(liveDetections, isAnalyzing)}
-                        <div className="flex-grow flex flex-col min-h-[150px]">
-                            <h4 className="text-md font-semibold mt-2 mb-2">Detection Trend</h4>
+                        <div className="flex-grow flex flex-col min-h-0 mt-4">
+                            <h4 className="text-md font-semibold mb-2">Detection Trend</h4>
                             {isCameraActive && graphData.length > 1 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={graphData} margin={{ top: 5, right: 20, left: -20, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={gridStrokeColor} />
-                                        <XAxis dataKey="time" stroke={axisStrokeColor} fontSize={10} tick={{ fill: axisStrokeColor }} />
-                                        <YAxis allowDecimals={false} stroke={axisStrokeColor} fontSize={10} tick={{ fill: axisStrokeColor }} />
-                                        <Tooltip contentStyle={tooltipContentStyle} wrapperStyle={{ fontSize: '12px' }} />
-                                        <Legend wrapperStyle={{ fontSize: "12px" }} />
-                                        <Line type="monotone" dataKey="Total Objects" stroke="#38b2ac" strokeWidth={2} dot={false} />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                                <div className="flex-grow min-h-0">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={graphData} margin={{ top: 5, right: 20, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke={gridStrokeColor} />
+                                            <XAxis dataKey="time" stroke={axisStrokeColor} fontSize={10} tick={{ fill: axisStrokeColor }} />
+                                            <YAxis allowDecimals={false} stroke={axisStrokeColor} fontSize={10} tick={{ fill: axisStrokeColor }} />
+                                            <Tooltip contentStyle={tooltipContentStyle} wrapperStyle={{ fontSize: '12px' }} />
+                                            <Legend wrapperStyle={{ fontSize: "12px" }} />
+                                            <Line type="monotone" dataKey="Total Objects" stroke="#38b2ac" strokeWidth={2} dot={false} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
                             ) : (
                                 <div className="flex-grow flex items-center justify-center text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-dark rounded-md"><p>{isCameraActive ? 'Collecting data...' : 'Start camera to see trend'}</p></div>
                             )}
                         </div>
                     </div>
                 </div>
-            </div >
+            </div>
         );
     }
 
