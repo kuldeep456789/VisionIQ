@@ -57,6 +57,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
     const [graphData, setGraphData] = useState<any[]>([]);
     const liveAnalysisLoopRef = useRef<number | undefined>(undefined);
+    const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
 
     // States for Uploader
     const [image, setImage] = useState<string | null>(null);
@@ -118,14 +119,20 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
     const stopLiveAnalysis = useCallback(() => {
         setIsAnalyzing(false);
         if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
-        if (liveVideoRef.current && liveVideoRef.current.srcObject) {
-            const stream = liveVideoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
+
+        // Stop tracks on the stored activeStream
+        if (activeStream) {
+            activeStream.getTracks().forEach(track => track.stop());
+            setActiveStream(null);
+        }
+
+        if (liveVideoRef.current) {
             liveVideoRef.current.srcObject = null;
         }
+
         setIsCameraActive(false);
         setIsPaused(false);
-    }, []);
+    }, [activeStream]);
 
     const analyzeLiveFrame = useCallback(async () => {
         const video = liveVideoRef.current;
@@ -177,6 +184,8 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
         }
     }, [isAnalyzing]);
 
+
+
     const startLiveCamera = useCallback(async () => {
         if (isLiveStarting) return;
 
@@ -185,12 +194,11 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
         setLiveDetections([]);
         setGraphData([]);
 
-        if (liveVideoRef.current && liveVideoRef.current.srcObject) {
-            const stream = liveVideoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
-            liveVideoRef.current.srcObject = null;
+        // Cleanup existing stream if any
+        if (activeStream) {
+            activeStream.getTracks().forEach(track => track.stop());
+            setActiveStream(null);
         }
-        setIsCameraActive(false);
 
         setIsLiveStarting(true);
         try {
@@ -203,19 +211,12 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                 }
             });
             console.log("Camera access granted.");
-            const video = liveVideoRef.current;
-            if (video) {
-                console.log("Setting video srcObject...");
-                video.srcObject = stream;
-                await video.play();
-                console.log("Video playing...");
 
-                setIsCameraActive(true);
-                setIsPaused(false);
-                setIsAnalyzing(true);
-                if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
-                analyzeLiveFrame();
-            }
+            // Store stream and activate camera UI (which renders the video element)
+            setActiveStream(stream);
+            setIsCameraActive(true);
+            setIsPaused(false);
+
         } catch (err) {
             console.error("Camera start error:", err);
             let message = 'Could not access camera. Please check permissions and try again.';
@@ -230,11 +231,31 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
             }
             setLiveError(message);
             setIsCameraActive(false);
-            setIsAnalyzing(false);
         } finally {
             setIsLiveStarting(false);
         }
-    }, [analyzeLiveFrame, facingMode, isLiveStarting]);
+    }, [facingMode, isLiveStarting, activeStream]);
+
+    // Effect to attach stream to video element once it's rendered
+    useEffect(() => {
+        if (isCameraActive && activeStream && liveVideoRef.current) {
+            const video = liveVideoRef.current;
+            console.log("Setting video srcObject...");
+            video.srcObject = activeStream;
+            video.play().then(() => {
+                console.log("Video playing...");
+                setIsAnalyzing(true);
+            }).catch(e => console.error("Video play error:", e));
+        }
+    }, [isCameraActive, activeStream]);
+
+    // Trigger analysis when isAnalyzing becomes true
+    useEffect(() => {
+        if (isAnalyzing) {
+            if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
+            analyzeLiveFrame();
+        }
+    }, [isAnalyzing, analyzeLiveFrame]);
 
     const handlePauseResumeToggle = () => {
         const video = liveVideoRef.current;

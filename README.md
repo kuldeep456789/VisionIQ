@@ -6,17 +6,17 @@ AI-powered crowd monitoring and analytics system with real-time object detection
 
 - **Node.js** (v16 or higher)
 - **Python** (3.8 or higher)
-- **Supabase Account** (for authentication)
+- **Neon Account** (PostgreSQL database)
 
 ## Setup
 
 ### 1. Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the `backend` directory:
 
 ```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+DATABASE_URL=your_neon_connection_string
+JWT_SECRET=your_jwt_secret_key
 PORT=5000
 ```
 
@@ -48,7 +48,7 @@ The backend will run on `http://localhost:5000`
 - Crowd analytics and heatmaps
 - Alert system for security events
 - Dark/Light theme support
-- Supabase authentication
+- Neon (PostgreSQL) authentication and data storage
 
 ## Project Structure
 

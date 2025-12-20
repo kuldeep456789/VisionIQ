@@ -1,88 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import mockApi from '../services/api';
-import type { HistoricalDataPoint } from '../types';
+import React from 'react';
 
 const Analytics: React.FC = () => {
-  const [data, setData] = useState<HistoricalDataPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
-
-  useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach(function (mutation) {
-        if (mutation.attributeName === "class") {
-          const newIsDarkMode = (mutation.target as HTMLElement).classList.contains('dark');
-          setIsDarkMode(newIsDarkMode);
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const historicalData = await mockApi.fetchHistoricalData();
-      setData(historicalData);
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return <div className="text-center p-10">Loading analytical data...</div>;
-  }
-
-  const formattedData = data.map(d => ({
-    ...d,
-    date: new Date(d.date).toLocaleString('en-US', { month: 'short', day: 'numeric' })
-  }));
-
-  const axisStrokeColor = isDarkMode ? '#a0aec0' : '#4a5568';
-  const gridStrokeColor = isDarkMode ? '#4a5568' : '#e2e8f0';
-  const tooltipContentStyle = {
-    backgroundColor: isDarkMode ? '#2d3748' : '#ffffff',
-    border: `1px solid ${gridStrokeColor}`
-  };
-
   return (
-    <div className="space-y-8">
-      <h2 className="text-3xl font-bold">Historical Analytics</h2>
-
-      <div className="bg-light-secondary dark:bg-gray-medium p-6 rounded-lg shadow-lg">
-        <h3 className="text-xl font-semibold mb-4">Crowd Count Trend (Last 30 Days)</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={formattedData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridStrokeColor} />
-            <XAxis dataKey="date" stroke={axisStrokeColor} />
-            <YAxis stroke={axisStrokeColor} />
-            <Tooltip contentStyle={tooltipContentStyle} />
-            <Legend />
-            <Line type="monotone" dataKey="crowd_count" name="Avg. Crowd Count" stroke="#38b2ac" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="bg-light-secondary dark:bg-gray-medium p-6 rounded-lg shadow-lg">
-        <h3 className="text-xl font-semibold mb-4">Alerts Overview (Last 30 Days)</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={formattedData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridStrokeColor} />
-            <XAxis dataKey="date" stroke={axisStrokeColor} />
-            <YAxis stroke={axisStrokeColor} />
-            <Tooltip contentStyle={tooltipContentStyle} />
-            <Legend />
-            <Bar dataKey="alerts" name="Total Alerts" fill="#e53e3e" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-24 h-24 text-blue-500 mb-4">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+      </svg>
+      <h2 className="text-2xl font-bold mb-2">Analytics Dashboard</h2>
+      <p className="text-gray-500 dark:text-gray-400 max-w-md">
+        Historical analytics will be available once object detection data is collected from your cameras. Start using the Live Object Detection or Camera View to begin gathering data.
+      </p>
     </div>
   );
 };

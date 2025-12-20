@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.1",
-    "@supabase/supabase-js": "^2.86.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.4.1"

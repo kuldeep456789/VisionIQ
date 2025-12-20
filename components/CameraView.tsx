@@ -7,23 +7,12 @@ interface CameraViewProps {
   data: CameraData;
 }
 
-const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: string | number; }> = ({ icon, label, value }) => (
-  <div className="bg-gray-100 dark:bg-gray-light p-3 rounded-lg flex items-center space-x-3">
-
-    <div>
-      <div className="text-sm text-gray-500 dark:text-gray-400">{label}</div>
-      <div className="text-lg font-bold text-light-text dark:text-white">{value}</div>
-    </div>
-  </div>
-);
-
 const CameraView: React.FC<CameraViewProps> = ({ camera, data }) => {
   const [privacyMode, setPrivacyMode] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [isStarting, setIsStarting] = useState<boolean>(false);
-  const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
 
   const getErrorMessage = (err: unknown): string => {
     if (err instanceof DOMException) {
@@ -150,46 +139,7 @@ const CameraView: React.FC<CameraViewProps> = ({ camera, data }) => {
               muted
               className={`w-full h-full object-cover transition-all duration-500 ${privacyMode ? 'blur-lg' : ''}`}
             />
-            {!privacyMode && (
-              <div className="absolute inset-0">
-                {data.heatmap.map((point, index) => (
-                  <div
-                    key={`heatmap-${index}`}
-                    className="absolute rounded-full"
-                    style={{
-                      left: `${point.x}%`,
-                      top: `${point.y}%`,
-                      width: '15%',
-                      height: '15%',
-                      background: `radial-gradient(circle, rgba(255, 0, 0, ${point.intensity * 0.6}) 0%, rgba(255, 0, 0, 0) 70%)`,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                  />
-                ))}
-                {data.zones.map((zone) => {
-                  const isHovered = zone.id === hoveredZoneId;
-                  return (
-                    <div
-                      key={zone.id}
-                      onMouseEnter={() => setHoveredZoneId(zone.id)}
-                      onMouseLeave={() => setHoveredZoneId(null)}
-                      className={`absolute transition-all duration-200 cursor-pointer ${isHovered ? 'border-4 border-solid shadow-lg' : 'border-2 border-dashed'}`}
-                      style={{
-                        left: `${zone.x}%`,
-                        top: `${zone.y}%`,
-                        width: `${zone.width}%`,
-                        height: `${zone.height}%`,
-                        backgroundColor: zone.color,
-                        borderColor: zone.color.replace('0.4', '1'),
-                        boxShadow: isHovered ? `0 0 20px ${zone.color.replace('0.4', '0.8')}` : 'none',
-                      }}
-                    >
-                      <span className="absolute -top-6 left-0 text-white text-xs font-semibold bg-black/50 px-1.5 py-0.5 rounded">{zone.name}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+
           </>
         ) : (
           <div className="text-center p-4 flex flex-col items-center">
@@ -202,39 +152,7 @@ const CameraView: React.FC<CameraViewProps> = ({ camera, data }) => {
         )}
       </div>
 
-      <div className="p-4 bg-light-secondary/80 dark:bg-gray-medium/70 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={null} label="Crowd Count" value={data.crowdCount} />
-        <StatCard icon={null} label="Density" value={`${data.density}/m²`} />
-        <StatCard icon={null} label="Entries" value={data.entryCount} />
-        <StatCard icon={null} label="Exits" value={data.exitCount} />
-      </div>
 
-      {data.zones.length > 0 && (
-        <div className="p-4 bg-light-secondary dark:bg-gray-medium border-t border-light-border dark:border-gray-light">
-          <h3 className="text-md font-bold mb-2">Monitored Zones</h3>
-          <div className="flex flex-wrap gap-2">
-            {data.zones.map(zone => {
-              const isHovered = zone.id === hoveredZoneId;
-              return (
-                <button
-                  key={zone.id}
-                  onMouseEnter={() => setHoveredZoneId(zone.id)}
-                  onMouseLeave={() => setHoveredZoneId(null)}
-                  className={`px-3 py-1 text-sm rounded-full border-2 transition-all duration-200 ${isHovered ? 'border-solid shadow-md' : 'border-dashed'}`}
-                  style={{
-                    borderColor: zone.color.replace('0.4', '1'),
-                    backgroundColor: isHovered ? zone.color : 'transparent',
-                    color: isHovered ? 'white' : 'inherit',
-                    textShadow: isHovered ? '0px 0px 3px black' : 'none',
-                  }}
-                >
-                  {zone.name}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
