@@ -40,6 +40,8 @@ export async function detectObjects(base64ImageData: string): Promise<Detection[
       body: JSON.stringify({ image: base64ImageData }),
     });
 
+    console.log(`Detection response status: ${response.status}`);
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Failed to detect objects');

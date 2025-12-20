@@ -54,6 +54,11 @@ const CameraView: React.FC<CameraViewProps> = ({ camera, data }) => {
           setIsCameraActive(true);
         }
       } catch (err) {
+        // Ignore AbortError which happens if the operation is interrupted
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          console.log("Camera start interrupted");
+          return;
+        }
         console.error("Error accessing camera:", err);
         setError(getErrorMessage(err));
         setIsCameraActive(false);

@@ -28,7 +28,7 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app, 
-     origins=['http://localhost:8000', 'http://127.0.0.1:8000'],
+     origins=['http://localhost:8000', 'http://127.0.0.1:8000', 'http://localhost:8001', 'http://127.0.0.1:8001'],
      supports_credentials=True,
      allow_headers=['Content-Type', 'Authorization'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
@@ -37,7 +37,7 @@ CORS(app,
 @app.after_request
 def after_request(response):
     origin = request.headers.get('Origin')
-    if origin in ['http://localhost:8000', 'http://127.0.0.1:8000']:
+    if origin in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://localhost:8001', 'http://127.0.0.1:8001']:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'

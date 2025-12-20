@@ -58,6 +58,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
     const [graphData, setGraphData] = useState<any[]>([]);
     const liveAnalysisLoopRef = useRef<number | undefined>(undefined);
     const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
+    const streamRef = useRef<MediaStream | null>(null); // Ref to hold stream for cleanup without triggering re-renders
 
     // States for Uploader
     const [image, setImage] = useState<string | null>(null);
@@ -120,11 +121,12 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
         setIsAnalyzing(false);
         if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
 
-        // Stop tracks on the stored activeStream
-        if (activeStream) {
-            activeStream.getTracks().forEach(track => track.stop());
-            setActiveStream(null);
+        // Stop tracks on the stored activeStream using REF
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
         }
+        setActiveStream(null);
 
         if (liveVideoRef.current) {
             liveVideoRef.current.srcObject = null;
@@ -132,7 +134,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
 
         setIsCameraActive(false);
         setIsPaused(false);
-    }, [activeStream]);
+    }, []); // Empty dependency array makes this stable!
 
     const analyzeLiveFrame = useCallback(async () => {
         const video = liveVideoRef.current;
@@ -150,7 +152,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
             ctx.drawImage(video, 0, 0, frameCanvas.width, frameCanvas.height);
             const base64ImageData = frameCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
+            console.log("Calling detectObjects...");
             const rawDetections = await detectObjects(base64ImageData);
+            console.log("Received rawDetections:", rawDetections);
 
             const scaledDetections: DetectionResult[] = (rawDetections || []).map((det: any, index: number) => ({
                 id: Date.now() + index,
@@ -161,6 +165,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                 height: det.box.height * video.videoHeight,
             }));
 
+            console.log("Scaled detections:", scaledDetections);
             setLiveDetections(scaledDetections);
             setLiveAnalysisError(null);
 
@@ -213,6 +218,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
             console.log("Camera access granted.");
 
             // Store stream and activate camera UI (which renders the video element)
+            streamRef.current = stream; // Store in ref for cleanup
             setActiveStream(stream);
             setIsCameraActive(true);
             setIsPaused(false);
@@ -238,15 +244,26 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
 
     // Effect to attach stream to video element once it's rendered
     useEffect(() => {
+        let isMounted = true;
         if (isCameraActive && activeStream && liveVideoRef.current) {
             const video = liveVideoRef.current;
             console.log("Setting video srcObject...");
             video.srcObject = activeStream;
             video.play().then(() => {
-                console.log("Video playing...");
-                setIsAnalyzing(true);
-            }).catch(e => console.error("Video play error:", e));
+                if (isMounted) {
+                    console.log("Video playing...");
+                    setIsAnalyzing(true);
+                }
+            }).catch(e => {
+                // Ignore AbortError which happens if the component unmounts or stream changes
+                if (isMounted && e.name !== 'AbortError') {
+                    console.error("Video play error:", e);
+                }
+            });
         }
+        return () => {
+            isMounted = false;
+        };
     }, [isCameraActive, activeStream]);
 
     // Trigger analysis when isAnalyzing becomes true
@@ -576,6 +593,26 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                 {renderHeader("Live Object Detection")}
                 <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
                     <div className="flex-grow flex flex-col bg-black relative overflow-hidden items-center justify-center">
+
+                        {/* Live Detection Overlay */}
+                        {isCameraActive && (
+                            <div className="absolute top-4 left-4 z-20 bg-black/50 p-2 rounded text-white text-xs">
+                                {isAnalyzing ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                        <span>Analyzing...</span>
+                                    </div>
+                                ) : (
+                                    <span>Camera Active</span>
+                                )}
+                                {liveAnalysisError && (
+                                    <div className="mt-1 text-red-400 font-bold bg-black/80 p-1 rounded">
+                                        Error: {liveAnalysisError}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {!isCameraActive ? (
                             <div className="text-center p-4">
                                 {liveError ? (
@@ -640,20 +677,33 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                                         title="Flip Camera"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                                         </svg>
                                     </button>
-                                </div>
-
-                                {isAnalyzing && !isPaused && <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">ANALYZING...</div>}
-                                {liveAnalysisError && (
-                                    <div className="absolute bottom-20 left-4 right-4 bg-red-900/80 border border-red-500 text-white p-3 rounded-lg"><p className="font-bold">Analysis Failed:</p><p className="text-xs">{liveAnalysisError}</p></div>
-                                )}
+                                    <button
+                                        onClick={stopLiveAnalysis}
+                                        className="text-white p-2 rounded-full hover:bg-red-500/20 hover:text-red-500 transition-colors"
+                                        title="Stop Camera"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div >
                             </>
                         )}
-                    </div>
-                    <div className="w-full md:w-80 bg-light-secondary dark:bg-gray-medium border-t md:border-t-0 md:border-l border-light-border dark:border-gray-light p-4 flex flex-col space-y-4">
+
+                        {/* DEBUG OVERLAY - ALWAYS VISIBLE IN LIVE MODE */}
+                        <div className="absolute top-16 left-4 bg-black/70 text-green-400 text-xs p-2 rounded font-mono pointer-events-none z-50">
+                            <p>Status: {isAnalyzing ? 'Analyzing' : 'Standby'}</p>
+                            <p>Cam Active: {String(isCameraActive)}</p>
+                            <p>Starting: {String(isLiveStarting)}</p>
+                            <p>Error: {liveError || 'None'}</p>
+                            <p>Stream: {activeStream ? 'Active' : 'Null'}</p>
+                            <p>Video Ref: {liveVideoRef.current ? 'Found' : 'Null'}</p>
+                            <p>Video Size: {liveVideoRef.current?.videoWidth}x{liveVideoRef.current?.videoHeight}</p>
+                            <p>ReadyState: {liveVideoRef.current?.readyState}</p>
+                        </div>
                         {renderObjectStats(liveDetections, isAnalyzing)}
                         <div className="flex-grow flex flex-col min-h-[150px]">
                             <h4 className="text-md font-semibold mt-2 mb-2">Detection Trend</h4>
@@ -674,7 +724,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
         );
     }
 
