@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Camera, DetectionResult } from '../types';
 import { detectObjects } from '../services/detectionService';
+import { addToHistory } from '../services/historyService';
+import liveDtImage from './Pages/image/liveDt.jpg';
+import imageAnaImage from './Pages/image/imageAna.png';
+import videoAImage from './Pages/image/videoA.png';
 
 // Helper to generate a consistent color from a string label
 const stringToColor = (str: string) => {
@@ -19,6 +23,7 @@ const stringToColor = (str: string) => {
 
 interface AnalyzerViewProps {
     camera: Camera;
+    onStatsUpdate?: (count: number) => void;
 }
 
 type AnalysisMode = 'selection' | 'live' | 'image' | 'video';
@@ -28,20 +33,24 @@ const SelectionCard: React.FC<{ title: string; description: string; imageUrl: st
         onClick={onClick}
         className="group relative flex flex-col items-center justify-end p-6 bg-light-secondary dark:bg-gray-medium rounded-lg shadow-lg transition-all transform hover:scale-105 cursor-pointer h-64 overflow-hidden"
     >
-        <div
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-110"
-            style={{ backgroundImage: `url(${imageUrl})` }}
-        ></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-        <div className="relative text-white text-center z-10">
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <p className="text-sm text-gray-300 mt-1">{description}</p>
+        <img
+            src={imageUrl}
+            alt={title}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-80 group-hover:opacity-100"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-300"></div>
+
+        <div className="relative text-white text-center z-10 transform transition-transform duration-300 group-hover:-translate-y-2">
+            <h3 className="text-xl font-bold mb-2 shadow-sm">{title}</h3>
+            <p className="text-sm text-gray-200 font-medium">{description}</p>
         </div>
     </div>
 );
 
 
-const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
+
+const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) => {
     const [mode, setMode] = useState<AnalysisMode>('selection');
 
     // States for Live Detection
@@ -90,6 +99,20 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
         observer.observe(document.documentElement, { attributes: true });
         return () => observer.disconnect();
     }, []);
+
+    const saveToHistory = (type: 'live' | 'image' | 'video', detections: DetectionResult[]) => {
+        const objectCounts = detections.reduce((acc, det) => {
+            acc[det.label] = (acc[det.label] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        addToHistory({
+            type,
+            description: `${type.charAt(0).toUpperCase() + type.slice(1)} analysis with ${detections.length} objects.`,
+            objectCount: detections.length,
+            details: objectCounts
+        });
+    };
 
     // --- Generic Drawing Logic ---
     const drawDetections = useCallback((
@@ -167,6 +190,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
 
             console.log("Scaled detections:", scaledDetections);
             setLiveDetections(scaledDetections);
+            if (onStatsUpdate) {
+                onStatsUpdate(scaledDetections.length);
+            }
             setLiveAnalysisError(null);
 
             setGraphData(prevData => {
@@ -364,7 +390,12 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
             if (scaledDetections.length === 0) {
                 setImageError("No objects were detected in the image.");
             }
+            if (scaledDetections.length === 0) {
+                setImageError("No objects were detected in the image.");
+            }
             setImageDetections(scaledDetections);
+            // Auto-save image analysis
+            saveToHistory('image', scaledDetections);
 
         } catch (error) {
             setImageError(error instanceof Error ? error.message : "An error occurred.");
@@ -559,23 +590,23 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                 </svg> */}
                 <h2 className="text-2xl font-bold mb-2">{camera.name}</h2>
                 {/* <p className="text-gray-500 dark:text-gray-400 mb-8">Perform real-time analysis or analyze media files for object detection.</p> */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
                     <SelectionCard
                         title="Live Object Detection"
-                        description="Use your device's camera for real-time analysis."
-                        imageUrl="https://images.unsplash.com/photo-1517036338519-3c363941eb4a?q=80&w=1974&auto=format&fit=crop"
+                        description="Real-time analysis using your device camera."
+                        imageUrl={liveDtImage}
                         onClick={() => handleModeChange('live')}
                     />
                     <SelectionCard
                         title="Analyze Image"
-                        description="Upload a static image to detect objects."
-                        imageUrl="https://images.unsplash.com/photo-1593348512330-8523d42c0a4f?q=80&w=2070&auto=format&fit=crop"
+                        description="Upload and scan static images."
+                        imageUrl={imageAnaImage}
                         onClick={() => handleModeChange('image')}
                     />
                     <SelectionCard
                         title="Analyze Video"
-                        description="Upload a video file for object detection."
-                        imageUrl="https://images.unsplash.com/photo-1579895429487-6750342921db?q=80&w=1968&auto=format&fit=crop"
+                        description="Process video files for frame-by-frame detection."
+                        imageUrl={videoAImage}
                         onClick={() => handleModeChange('video')}
                     />
                 </div>
@@ -689,6 +720,28 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                                         </svg>
                                     </button>
+                                    <button
+                                        onClick={stopLiveAnalysis}
+                                        className="text-white p-2 rounded-full hover:bg-red-500/20 hover:text-red-500 transition-colors"
+                                        title="Stop Camera"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            saveToHistory('live', liveDetections);
+                                            alert("Snapshot saved to History!");
+                                        }}
+                                        className="text-white p-2 rounded-full hover:bg-white/20 transition-colors"
+                                        title="Save Snapshot"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </>
                         )}
@@ -770,6 +823,19 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera }) => {
                                             <video ref={uploadedVideoRef} src={video!} controls className="max-w-full max-h-[400px] mx-auto" onEnded={stopVideoAnalysis} />
                                             <canvas ref={videoCanvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
                                             {isAnalyzingVideo && <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">ANALYZING...</div>}
+                                            <button
+                                                onClick={() => {
+                                                    saveToHistory('video', videoDetections);
+                                                    alert("Video analysis saved to History!");
+                                                }}
+                                                className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors z-10"
+                                                title="Save Analysis"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                                                </svg>
+                                            </button>
                                         </>
                                     )}
                                 </div>

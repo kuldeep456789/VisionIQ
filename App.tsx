@@ -4,14 +4,16 @@ import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import LoginPage from './components/LoginPage';
+import History from './components/History';
+import Home from './components/Home';
 
 
 import { User } from './types';
 
-type View = 'dashboard' | 'analytics' | 'settings';
+type View = 'home' | 'analytics' | 'settings' | 'history';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [currentView, setCurrentView] = useState<View>('home');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(window.innerWidth > 768);
   const [user, setUser] = useState<User>({ id: 0, name: 'Admin User', email: 'admin@visioniq.io', profilePicture: 'https://i.pravatar.cc/40?u=admin' });
@@ -43,12 +45,14 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case 'analytics':
-        return <Analytics />;
+        return <Dashboard />;
       case 'settings':
         return <Settings user={user} setUser={setUser} />;
-      case 'dashboard':
+      case 'history':
+        return <History />;
+      case 'home':
       default:
-        return <Dashboard />;
+        return <Home />;
     }
   };
 

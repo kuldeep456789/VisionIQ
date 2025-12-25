@@ -1,6 +1,6 @@
 import React from 'react';
 
-type View = 'dashboard' | 'analytics' | 'settings';
+type View = 'home' | 'analytics' | 'settings' | 'history';
 
 interface SidebarProps {
   currentView: View;
@@ -35,8 +35,8 @@ const NavItem: React.FC<{
       onClick={handleClick}
       title={isOpen ? '' : label}
       className={`flex items-center w-full px-4 py-3 text-left transition-all duration-200 rounded-lg group ${isActive
-          ? 'bg-brand-blue text-white'
-          : 'text-gray-400 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-light hover:text-light-text dark:hover:text-white'
+        ? 'bg-brand-blue text-white'
+        : 'text-gray-400 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-light hover:text-light-text dark:hover:text-white'
         } ${!isOpen && 'justify-center'}`}
     >
       <div className="flex-shrink-0">{icon}</div>
@@ -88,10 +88,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, 
               <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
             </svg>
           }
-          label="Dashboard"
-          isActive={currentView === 'dashboard'}
+          label="Home"
+          isActive={currentView === 'home'}
           isOpen={isOpen}
-          onClick={() => setCurrentView('dashboard')}
+          onClick={() => setCurrentView('home')}
           setIsSidebarOpen={setIsSidebarOpen}
         />
         <NavItem
@@ -104,6 +104,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, 
           isActive={currentView === 'analytics'}
           isOpen={isOpen}
           onClick={() => setCurrentView('analytics')}
+          setIsSidebarOpen={setIsSidebarOpen}
+        />
+        <NavItem
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 lg:w-6 lg:h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          }
+          label="History"
+          isActive={currentView === 'history'}
+          isOpen={isOpen}
+          onClick={() => setCurrentView('history')}
           setIsSidebarOpen={setIsSidebarOpen}
         />
         <NavItem
