@@ -27,8 +27,12 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Get allowed origins from env or use default localhosts
+allowed_origins = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000,http://localhost:8001,http://127.0.0.1:8001').split(',')
+
 CORS(app, 
-     origins=['http://localhost:8000', 'http://127.0.0.1:8000', 'http://localhost:8001', 'http://127.0.0.1:8001'],
+     origins=allowed_origins,
      supports_credentials=True,
      allow_headers=['Content-Type', 'Authorization'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
@@ -366,4 +370,6 @@ def internal_error(error):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    # Use environment variable for debug mode, default to False for production safety
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

@@ -82,23 +82,22 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
-        {/* Floating Mobile Menu Button */}
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="fixed bottom-6 right-6 z-30 lg:hidden w-14 h-14 bg-brand-blue hover:bg-brand-blue-light text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 active:scale-95"
-          aria-label="Toggle menu"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className={`w-6 h-6 transition-transform duration-300 ${isSidebarOpen ? 'rotate-90' : ''}`}
+        {/* Mobile Header (Navbar) */}
+        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-light-border dark:border-gray-700 sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center text-white font-bold">V</div>
+            <span className="text-xl font-bold text-light-text dark:text-white">VISIONIQ</span>
+          </div>
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 text-gray-500 hover:text-brand-blue transition-colors focus:outline-none rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Open menu"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+        </header>
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-light-bg dark:bg-gray-dark p-4 sm:p-6 lg:p-8">

@@ -74,20 +74,20 @@ const History: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-light-background dark:bg-gray-dark text-light-text dark:text-white overflow-hidden">
-            <div className="p-6 border-b border-light-border dark:border-gray-light flex justify-between items-center bg-white dark:bg-gray-800 shadow-sm z-10">
-                <h1 className="text-2xl font-bold">Detection History</h1>
-                <div className="flex gap-4">
+            <div className="p-4 md:p-6 border-b border-light-border dark:border-gray-light flex flex-col md:flex-row justify-between items-center bg-white dark:bg-gray-800 shadow-sm z-10 gap-4 md:gap-0">
+                <h1 className="text-2xl font-bold w-full md:w-auto text-center md:text-left">Detection History</h1>
+                <div className="flex gap-4 w-full md:w-auto justify-center md:justify-end">
                     <input
                         type="text"
                         placeholder="Search history..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                        className="flex-grow md:flex-grow-0 w-full md:w-64 px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
                     />
                     {history.length > 0 && (
                         <button
                             onClick={handleClearAll}
-                            className="text-red-500 hover:text-red-700 font-semibold text-sm transition-colors"
+                            className="text-red-500 hover:text-red-700 font-semibold text-sm transition-colors whitespace-nowrap"
                         >
                             Clear All
                         </button>
@@ -114,7 +114,7 @@ const History: React.FC = () => {
                                 <div key={type} className="space-y-4">
                                     <h2 className="text-xl font-bold capitalize flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
                                         <span className={`px-3 py-1 text-sm font-bold rounded uppercase tracking-wider text-white ${type === 'live' ? 'bg-red-500' :
-                                                type === 'video' ? 'bg-purple-500' : 'bg-blue-500'
+                                            type === 'video' ? 'bg-purple-500' : 'bg-blue-500'
                                             }`}>
                                             {type}
                                         </span>

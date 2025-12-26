@@ -3,7 +3,7 @@ import EmojiPicker from './EmojiPicker';
 import { User } from '../types';
 
 const SettingsCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div className="bg-light-secondary dark:bg-gray-medium p-6 rounded-lg shadow-lg">
+    <div className="bg-light-secondary dark:bg-gray-medium p-4 md:p-6 rounded-lg shadow-lg">
         <h3 className="text-xl font-semibold mb-4 border-b border-light-border dark:border-gray-light pb-3">{title}</h3>
         <div className="space-y-4">{children}</div>
     </div>

@@ -33,8 +33,8 @@ const Dashboard: React.FC = () => {
   }, []);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-      <div className="lg:col-span-8 flex flex-col gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 h-full font-sans">
+      <div className="lg:col-span-8 flex flex-col gap-4 md:gap-6">
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <DashboardStatCard
