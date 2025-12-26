@@ -623,7 +623,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
             <div className="h-full flex flex-col">
                 {renderHeader("Live Object Detection")}
                 <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
-                    <div className="flex-grow flex flex-col bg-black relative overflow-hidden items-center justify-center">
+                    <div className="w-full md:flex-grow flex flex-col bg-black relative overflow-hidden items-center justify-center min-h-[300px] md:min-h-0 aspect-video md:aspect-auto">
 
                         {/* Live Detection Overlay */}
                         {isCameraActive && (
@@ -686,7 +686,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                                 <video ref={liveVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                                 <canvas ref={liveCanvasRef} className="absolute top-0 left-0 w-full h-full" />
 
-                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/50 p-3 rounded-xl backdrop-blur-sm">
+                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 md:gap-4 bg-black/50 p-2 md:p-3 rounded-xl backdrop-blur-sm w-[90%] md:w-auto">
                                     <button
                                         onClick={handlePauseResumeToggle}
                                         className="text-white p-2 rounded-full hover:bg-white/20 transition-colors"

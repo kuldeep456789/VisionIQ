@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
           <h2 className="text-2xl font-bold">Live Dashboard</h2>
         </div>
 
-        <div className="bg-light-secondary dark:bg-gray-medium rounded-lg shadow-lg overflow-hidden flex-grow">
+        <div className="bg-light-secondary dark:bg-gray-medium rounded-lg shadow-lg overflow-hidden flex-grow min-h-[500px] md:min-h-0">
           <AnalyzerView camera={selectedCamera} onStatsUpdate={handleStatsUpdate} />
         </div>
 
