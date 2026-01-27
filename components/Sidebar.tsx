@@ -1,6 +1,6 @@
 import React from 'react';
 
-type View = 'home' | 'analytics' | 'settings' | 'history';
+type View = 'analytics' | 'settings' | 'history' | 'info';
 
 interface SidebarProps {
   currentView: View;
@@ -56,7 +56,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, 
       className={`fixed inset-y-0 left-0 z-30 flex flex-col bg-light-secondary dark:bg-gray-medium border-r border-light-border dark:border-gray-light transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-20'
         } ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
     >
-      {/* Header with Toggle Button */}
       <div
         className={`flex items-center h-16 lg:h-[68px] border-b border-light-border dark:border-gray-light ${isOpen ? 'px-4 justify-between' : 'justify-center'
           }`}
@@ -80,18 +79,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, 
         {isOpen && <span className="ml-3 text-lg lg:text-xl font-bold truncate">VISIONIQ</span>}
       </div>
 
-      {/* Navigation Items */}
       <div className="flex flex-col flex-1 p-3 lg:p-4 space-y-1 lg:space-y-2 overflow-y-auto">
         <NavItem
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 lg:w-6 lg:h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
             </svg>
           }
-          label="Home"
-          isActive={currentView === 'home'}
+          label="About"
+          isActive={currentView === 'info'}
           isOpen={isOpen}
-          onClick={() => setCurrentView('home')}
+          onClick={() => setCurrentView('info')}
           setIsSidebarOpen={setIsSidebarOpen}
         />
         <NavItem
@@ -133,9 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, 
         />
       </div>
 
-      {/* User Profile Footer with Sign Out */}
       <div className="border-t border-light-border dark:border-gray-light">
-        {/* User Profile */}
         <div className="p-3 lg:p-4">
           <div className="flex items-center">
             <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-brand-blue flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -157,7 +153,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, isOpen, 
           </div>
         </div>
 
-        {/* Sign Out Button */}
         <div className="px-3 lg:px-4 pb-3 lg:pb-4">
           <button
             onClick={onLogout}

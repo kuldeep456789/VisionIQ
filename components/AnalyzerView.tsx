@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Camera, DetectionResult } from '../types';
+import { Camera, DetectionResult, Alert, AlertSeverity } from '../types';
 import { detectObjects } from '../services/detectionService';
 import { addToHistory } from '../services/historyService';
 import liveDtImage from './Pages/image/liveDt.jpg';
 import imageAnaImage from './Pages/image/imageAna.png';
 import videoAImage from './Pages/image/videoA.png';
 
-// Helper to generate a consistent color from a string label
 const stringToColor = (str: string) => {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -24,6 +23,7 @@ const stringToColor = (str: string) => {
 interface AnalyzerViewProps {
     camera: Camera;
     onStatsUpdate?: (count: number) => void;
+    onAlert?: (alert: Alert) => void;
 }
 
 type AnalysisMode = 'selection' | 'live' | 'image' | 'video';
@@ -31,29 +31,41 @@ type AnalysisMode = 'selection' | 'live' | 'image' | 'video';
 const SelectionCard: React.FC<{ title: string; description: string; imageUrl: string; onClick: () => void; }> = ({ title, description, imageUrl, onClick }) => (
     <div
         onClick={onClick}
-        className="group relative flex flex-col items-center justify-end p-6 bg-light-secondary dark:bg-gray-medium rounded-lg shadow-lg transition-all transform hover:scale-105 cursor-pointer h-64 overflow-hidden"
+        className="group relative flex flex-col justify-end p-6 bg-gray-900 rounded-2xl shadow-xl overflow-hidden h-80 cursor-pointer transition-all duration-500 hover:shadow-2xl border border-gray-800 hover:border-gray-600"
     >
-        <img
-            src={imageUrl}
-            alt={title}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-80 group-hover:opacity-100"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
-        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-300"></div>
+        {/* Image Background */}
+        <div className="absolute inset-0 overflow-hidden">
+            <img
+                src={imageUrl}
+                alt={title}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-70 group-hover:opacity-100"
+            />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent opacity-90 group-hover:opacity-80 transition-opacity duration-500"></div>
+        </div>
 
-        <div className="relative text-white text-center z-10 transform transition-transform duration-300 group-hover:-translate-y-2">
-            <h3 className="text-xl font-bold mb-2 shadow-sm">{title}</h3>
-            <p className="text-sm text-gray-200 font-medium">{description}</p>
+        {/* Content */}
+        <div className="relative z-10 transform transition-transform duration-500 translate-y-2 group-hover:translate-y-0">
+            <div className="w-12 h-1 bg-blue-500 mb-4 rounded-full transition-all duration-300 group-hover:w-20 group-hover:bg-blue-400"></div>
+            <h3 className="text-3xl font-black text-white mb-2 uppercase tracking-wide leading-none">{title}</h3>
+            <p className="text-gray-400 text-sm font-medium line-clamp-2 mb-4 group-hover:text-gray-200 transition-colors">{description}</p>
+
+            {/* Action Indicator */}
+            <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-widest opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-75">
+                <span>Start Analysis</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+            </div>
         </div>
     </div>
 );
 
 
 
-const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) => {
+const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAlert }) => {
     const [mode, setMode] = useState<AnalysisMode>('selection');
 
-    // States for Live Detection
     const liveVideoRef = useRef<HTMLVideoElement>(null);
     const liveCanvasRef = useRef<HTMLCanvasElement>(null);
     const [liveError, setLiveError] = useState<string | null>(null);
@@ -67,9 +79,9 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
     const [graphData, setGraphData] = useState<any[]>([]);
     const liveAnalysisLoopRef = useRef<number | undefined>(undefined);
     const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
-    const streamRef = useRef<MediaStream | null>(null); // Ref to hold stream for cleanup without triggering re-renders
+    const streamRef = useRef<MediaStream | null>(null);
+    const [sessionData, setSessionData] = useState<{ timestamp: string; detections: DetectionResult[] }[]>([]);
 
-    // States for Uploader
     const [image, setImage] = useState<string | null>(null);
     const [video, setVideo] = useState<string | null>(null);
     const [imageDetections, setImageDetections] = useState<DetectionResult[]>([]);
@@ -114,7 +126,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
         });
     };
 
-    // --- Generic Drawing Logic ---
     const drawDetections = useCallback((
         ctx: CanvasRenderingContext2D,
         detections: DetectionResult[],
@@ -139,7 +150,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
         });
     }, []);
 
-    // --- Live Detection Logic ---
     const stopLiveAnalysis = useCallback(() => {
         setIsAnalyzing(false);
         if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
@@ -157,7 +167,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
 
         setIsCameraActive(false);
         setIsPaused(false);
-    }, []); // Empty dependency array makes this stable!
+    }, []);
 
     const analyzeLiveFrame = useCallback(async () => {
         const video = liveVideoRef.current;
@@ -203,17 +213,52 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                 const updatedData = [...prevData, newDataPoint];
                 return updatedData.length > 30 ? updatedData.slice(1) : updatedData;
             });
+
+            setSessionData(prev => [
+                ...prev,
+                {
+                    timestamp: new Date().toISOString(),
+                    detections: scaledDetections
+                }
+            ]);
+
+            if (onAlert && scaledDetections.length > 0) {
+                if (scaledDetections.length >= 5) {
+                    onAlert({
+                        id: Date.now().toString(),
+                        timestamp: new Date(),
+                        cameraId: camera.id,
+                        cameraName: camera.name,
+                        message: `High density detected: ${scaledDetections.length} objects.`,
+                        type: 'Overcrowding',
+                        severity: AlertSeverity.Warning
+                    });
+                }
+
+                const hasPerson = scaledDetections.some(d => d.label.toLowerCase() === 'person');
+                if (hasPerson && Math.random() > 0.98) {
+                    onAlert({
+                        id: Date.now().toString(),
+                        timestamp: new Date(),
+                        cameraId: camera.id,
+                        cameraName: camera.name,
+                        message: `Potential safety hazard detected.`,
+                        type: 'Loitering',
+                        severity: AlertSeverity.Info
+                    });
+                }
+            }
+
         } catch (err) {
             console.error("Analysis failed:", err);
             const message = err instanceof Error ? err.message : "An unknown error occurred.";
             setLiveAnalysisError(message);
         } finally {
             if (isAnalyzing && liveVideoRef.current && !liveVideoRef.current.paused) {
-                // console.log("Scheduling next frame analysis...");
-                liveAnalysisLoopRef.current = window.setTimeout(analyzeLiveFrame, 1000); // Reduced delay for smoother testing
+                liveAnalysisLoopRef.current = window.setTimeout(analyzeLiveFrame, 1000);
             }
         }
-    }, [isAnalyzing]);
+    }, [isAnalyzing, onAlert, camera]);
 
 
 
@@ -224,8 +269,8 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
         setLiveAnalysisError(null);
         setLiveDetections([]);
         setGraphData([]);
+        setSessionData([]);
 
-        // Cleanup existing stream if any
         if (activeStream) {
             activeStream.getTracks().forEach(track => track.stop());
             setActiveStream(null);
@@ -243,8 +288,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
             });
             console.log("Camera access granted.");
 
-            // Store stream and activate camera UI (which renders the video element)
-            streamRef.current = stream; // Store in ref for cleanup
+            streamRef.current = stream;
             setActiveStream(stream);
             setIsCameraActive(true);
             setIsPaused(false);
@@ -268,7 +312,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
         }
     }, [facingMode, isLiveStarting, activeStream]);
 
-    // Effect to attach stream to video element once it's rendered
     useEffect(() => {
         let isMounted = true;
         if (isCameraActive && activeStream && liveVideoRef.current) {
@@ -281,7 +324,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                     setIsAnalyzing(true);
                 }
             }).catch(e => {
-                // Ignore AbortError which happens if the component unmounts or stream changes
                 if (isMounted && e.name !== 'AbortError') {
                     console.error("Video play error:", e);
                 }
@@ -292,7 +334,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
         };
     }, [isCameraActive, activeStream]);
 
-    // Trigger analysis when isAnalyzing becomes true
     useEffect(() => {
         if (isAnalyzing) {
             if (liveAnalysisLoopRef.current) clearTimeout(liveAnalysisLoopRef.current);
@@ -318,18 +359,28 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
         }
     };
 
+    const downloadSessionData = () => {
+        if (sessionData.length === 0) {
+            alert("No data collected yet.");
+            return;
+        }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sessionData, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "visioniq_session_data.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
+
     const handleFlipCamera = () => {
         setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
     };
 
     useEffect(() => {
-        // If the camera is active when the facing mode changes, restart the camera
-        // to apply the new setting.
         if (isCameraActive) {
             startLiveCamera();
         }
-        // We only want this to run when facingMode changes.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [facingMode]);
 
     useEffect(() => {
@@ -343,7 +394,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
         }
     }, [liveDetections, isCameraActive, drawDetections]);
 
-    // --- Uploader Logic ---
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
         const file = e.target.files?.[0];
         if (file) {
@@ -394,7 +444,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                 setImageError("No objects were detected in the image.");
             }
             setImageDetections(scaledDetections);
-            // Auto-save image analysis
             saveToHistory('image', scaledDetections);
 
         } catch (error) {
@@ -513,9 +562,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
         }
     }, [videoDetections, drawDetections]);
 
-    // --- Component Lifecycle & Cleanup ---
     const handleModeChange = (newMode: AnalysisMode) => {
-        // Stop any active analysis before switching
         stopLiveAnalysis();
         stopVideoAnalysis();
         setMode(newMode);
@@ -529,7 +576,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
     }, [stopLiveAnalysis, stopVideoAnalysis]);
 
 
-    // --- Render Logic ---
     const renderHeader = (title: string) => (
         <div className="p-4 border-b border-light-border dark:border-gray-light flex items-center gap-4">
             <button onClick={() => handleModeChange('selection')} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-light">
@@ -588,8 +634,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                 {/* <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-24 h-24 text-blue-500 mb-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
                 </svg> */}
-                <h2 className="text-2xl font-bold mb-2">{camera.name}</h2>
-                {/* <p className="text-gray-500 dark:text-gray-400 mb-8">Perform real-time analysis or analyze media files for object detection.</p> */}
+                <h2 className="text-4xl md:text-5xl font-black mb-8 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 uppercase tracking-tighter shadow-sm">{camera.name}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
                     <SelectionCard
                         title="Live Object Detection"
@@ -625,7 +670,6 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                 <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
                     <div className="w-full md:flex-grow flex flex-col bg-black relative overflow-hidden items-center justify-center min-h-[300px] md:min-h-0 aspect-video md:aspect-auto">
 
-                        {/* Live Detection Overlay */}
                         {isCameraActive && (
                             <div className="absolute top-4 left-4 z-20 bg-black/50 p-2 rounded text-white text-xs">
                                 {isAnalyzing ? (
@@ -641,6 +685,27 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                                         Error: {liveAnalysisError}
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {isCameraActive && onAlert && (
+                            <div className="absolute top-16 right-4 z-20">
+                                <button
+                                    onClick={() => {
+                                        onAlert({
+                                            id: Date.now().toString(),
+                                            timestamp: new Date(),
+                                            cameraId: camera.id,
+                                            cameraName: camera.name,
+                                            message: "Simulated Intrusion Detected!",
+                                            type: 'Intrusion',
+                                            severity: AlertSeverity.Critical
+                                        });
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-3 rounded shadow-lg transition-colors border border-red-400"
+                                >
+                                    ⚠ Simulate Alert
+                                </button>
                             </div>
                         )}
 
@@ -730,6 +795,15 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                                         </svg>
                                     </button>
                                     <button
+                                        onClick={downloadSessionData}
+                                        className="text-white p-2 rounded-full hover:bg-white/20 transition-colors"
+                                        title="Download Session Data"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                        </svg>
+                                    </button>
+                                    <button
                                         onClick={() => {
                                             saveToHistory('live', liveDetections);
                                             alert("Snapshot saved to History!");
@@ -781,7 +855,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate }) =>
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
         );
     }
 

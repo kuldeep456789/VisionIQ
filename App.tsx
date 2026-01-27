@@ -5,15 +5,14 @@ import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import LoginPage from './components/LoginPage';
 import History from './components/History';
-import Home from './components/Home';
-
+import ProjectInfo from './components/ProjectInfo';
 
 import { User } from './types';
 
-type View = 'home' | 'analytics' | 'settings' | 'history';
+type View = 'analytics' | 'settings' | 'history' | 'info';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('home');
+  const [currentView, setCurrentView] = useState<View>('info');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(window.innerWidth > 768);
   const [user, setUser] = useState<User>({ id: 0, name: 'Admin User', email: 'admin@visioniq.io', profilePicture: 'https://i.pravatar.cc/40?u=admin' });
@@ -36,6 +35,7 @@ const App: React.FC = () => {
       profilePicture: userData.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`
     });
     setIsAuthenticated(true);
+    setCurrentView('info');
   };
 
   const handleLogout = () => {
@@ -50,9 +50,10 @@ const App: React.FC = () => {
         return <Settings user={user} setUser={setUser} />;
       case 'history':
         return <History />;
-      case 'home':
+      case 'info':
+        return <ProjectInfo />;
       default:
-        return <Home />;
+        return <ProjectInfo />;
     }
   };
 
@@ -62,7 +63,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-light-bg dark:bg-gray-900 font-sans text-light-text dark:text-gray-200">
-      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-20 lg:hidden"
@@ -70,7 +70,6 @@ const App: React.FC = () => {
         ></div>
       )}
 
-      {/* Sidebar */}
       <Sidebar
         currentView={currentView}
         setCurrentView={setCurrentView}
@@ -80,9 +79,7 @@ const App: React.FC = () => {
         onLogout={handleLogout}
       />
 
-      {/* Main Content */}
       <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
-        {/* Mobile Header (Navbar) */}
         <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-light-border dark:border-gray-700 sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center text-white font-bold">V</div>
@@ -99,7 +96,6 @@ const App: React.FC = () => {
           </button>
         </header>
 
-        {/* Main Content Area */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-light-bg dark:bg-gray-dark p-4 sm:p-6 lg:p-8">
           {renderView()}
         </main>
