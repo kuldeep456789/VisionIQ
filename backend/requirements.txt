@@ -8,3 +8,6 @@ PyJWT
 passlib[bcrypt]
 werkzeug
 gunicorn
+insightface
+onnxruntime
+faiss-cpu

@@ -65,6 +65,8 @@ export interface DetectionResult {
   height: number;
   label: string;
   trackId?: number;
+  visitorStatus?: string;
+  visitorName?: string;
 }
 
 export interface User {

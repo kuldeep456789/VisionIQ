@@ -98,6 +98,11 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAl
     const lastDetectionsRef = useRef<DetectionResult[]>([]);
     const nextTrackIdRef = useRef<number>(1);
 
+    // Video Recording State
+    const [isRecording, setIsRecording] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const recordedChunksRef = useRef<Blob[]>([]);
+
     const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
 
     useEffect(() => {
@@ -134,8 +139,12 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAl
     ) => {
         ctx.clearRect(0, 0, width, height);
         detections.forEach(det => {
-            const color = stringToColor(det.label);
-            const label = det.trackId ? `${det.label} #${det.trackId}` : det.label;
+            const color = det.visitorStatus === 'Returning Visitor' ? '#10b981' : (det.visitorStatus === 'New Visitor' ? '#3b82f6' : stringToColor(det.label));
+
+            let label = det.trackId ? `${det.label} #${det.trackId}` : det.label;
+            if (det.visitorStatus && det.visitorStatus !== 'Unknown') {
+                label = `${det.visitorName || det.visitorStatus}`;
+            }
 
             ctx.strokeStyle = color;
             ctx.lineWidth = 3;
@@ -144,9 +153,15 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAl
             ctx.font = 'bold 14px sans-serif';
             const textWidth = ctx.measureText(label).width;
             ctx.fillStyle = color;
-            ctx.fillRect(det.x, det.y, textWidth + 10, 20);
+            ctx.fillRect(det.x, det.y - 25, textWidth + 15, 25);
             ctx.fillStyle = 'white';
-            ctx.fillText(label, det.x + 5, det.y + 15);
+            ctx.fillText(label, det.x + 7, det.y - 7);
+
+            if (det.visitorStatus && det.visitorStatus !== 'Unknown') {
+                ctx.font = '9px sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.fillText(det.visitorStatus, det.x + 7, det.y - 18);
+            }
         });
     }, []);
 
@@ -167,6 +182,7 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAl
 
         setIsCameraActive(false);
         setIsPaused(false);
+        stopRecording(); // Stop recording if active
     }, []);
 
     const analyzeLiveFrame = useCallback(async () => {
@@ -192,13 +208,15 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAl
             const scaledDetections: DetectionResult[] = (rawDetections || []).map((det: any, index: number) => ({
                 id: Date.now() + index,
                 label: det.label,
+                trackId: det.track_id,
+                visitorStatus: det.visitor_status,
+                visitorName: det.visitor_name,
                 x: det.box.x * video.videoWidth,
                 y: det.box.y * video.videoHeight,
                 width: det.box.width * video.videoWidth,
                 height: det.box.height * video.videoHeight,
             }));
 
-            console.log("Scaled detections:", scaledDetections);
             setLiveDetections(scaledDetections);
             if (onStatsUpdate) {
                 onStatsUpdate(scaledDetections.length);
@@ -373,6 +391,34 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAl
         downloadAnchorNode.remove();
     };
 
+    const startRecording = () => {
+        if (!activeStream) return;
+        recordedChunksRef.current = [];
+        const recorder = new MediaRecorder(activeStream, { mimeType: 'video/webm' });
+        recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+        };
+        recorder.onstop = () => {
+            const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `visioniq_recording_${new Date().getTime()}.webm`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+        recorder.start();
+        mediaRecorderRef.current = recorder;
+        setIsRecording(true);
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
     const handleFlipCamera = () => {
         setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
     };
@@ -504,21 +550,26 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAl
             ctx.drawImage(video, 0, 0, frameCanvas.width, frameCanvas.height);
             const base64 = frameCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
             const rawDetections = await detectObjects(base64);
+
             const scaled = (rawDetections || []).map((d: any, i: number) => ({
-                id: Date.now() + i, label: d.label,
-                x: d.box.x * video.videoWidth, y: d.box.y * video.videoHeight,
-                width: d.box.width * video.videoWidth, height: d.box.height * video.videoHeight
+                id: Date.now() + i,
+                label: d.label,
+                trackId: d.track_id,
+                visitorStatus: d.visitor_status,
+                visitorName: d.visitor_name,
+                x: d.box.x * video.videoWidth,
+                y: d.box.y * video.videoHeight,
+                width: d.box.width * video.videoWidth,
+                height: d.box.height * video.videoHeight
             }));
 
-            const tracked = updateTrackedObjects(scaled, lastDetectionsRef.current, video.videoWidth, video.videoHeight);
-            lastDetectionsRef.current = tracked;
-            setVideoDetections(tracked);
-            videoAnalysisLoopRef.current = window.setTimeout(analyzeVideoFrame, 5000);
+            setVideoDetections(scaled);
+            videoAnalysisLoopRef.current = window.setTimeout(analyzeVideoFrame, 1000); // More frequent for video
         } catch (err) {
             setVideoError(err instanceof Error ? err.message : "An error occurred.");
             stopVideoAnalysis();
         }
-    }, [stopVideoAnalysis, updateTrackedObjects]);
+    }, [stopVideoAnalysis]);
 
     const handleVideoAnalysisToggle = () => {
         if (isAnalyzingVideo) {
@@ -786,12 +837,12 @@ const AnalyzerView: React.FC<AnalyzerViewProps> = ({ camera, onStatsUpdate, onAl
                                         </svg>
                                     </button>
                                     <button
-                                        onClick={stopLiveAnalysis}
-                                        className="text-white p-2 rounded-full hover:bg-red-500/20 hover:text-red-500 transition-colors"
-                                        title="Stop Camera"
+                                        onClick={isRecording ? stopRecording : startRecording}
+                                        className={`p-2 rounded-full transition-colors ${isRecording ? 'text-red-500 bg-red-500/20 animate-pulse' : 'text-white hover:bg-white/20'}`}
+                                        title={isRecording ? "Stop Recording" : "Start Recording"}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6.75 6.75 0 1 0 0-13.5 6.75 6.75 0 0 0 0 13.5ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
                                         </svg>
                                     </button>
                                     <button

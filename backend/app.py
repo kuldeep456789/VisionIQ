@@ -12,6 +12,7 @@ import jwt
 import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
@@ -22,6 +23,14 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+try:
+    import faiss
+    from insightface.app import FaceAnalysis
+except ImportError:
+    faiss = None
+    FaceAnalysis = None
+    logger.warning("⚠️ faiss or insightface not installed. Face recognition features will be disabled.")
 # Reduce Flask's werkzeug logging noise
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -88,6 +97,17 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # Create visitors table
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS visitors (
+                id SERIAL PRIMARY KEY,
+                name TEXT DEFAULT 'Unknown',
+                embedding BYTEA,
+                last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                visit_count INTEGER DEFAULT 1,
+                first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         conn.commit()
         logger.info("Database tables initialized successfully.")
     except Exception as e:
@@ -114,6 +134,48 @@ except Exception as e:
     logger.error(f"❌ Failed to load YOLO model: {e}")
     model = None
 
+# Initialize Face Analysis (ArcFace)
+face_app = None
+try:
+    logger.info("Initializing FaceAnalysis (ArcFace)...")
+    face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+    face_app.prepare(ctx_id=0, det_size=(640, 640))
+    logger.info("✅ FaceAnalysis initialized successfully.")
+except Exception as e:
+    logger.error(f"❌ Failed to initialize FaceAnalysis: {e}")
+
+# FAISS Index setup
+EMBEDDING_DIM = 512 # ArcFace buffalo_l produces 512-d embeddings
+faiss_index = faiss.IndexFlatL2(EMBEDDING_DIM) if faiss else None
+visitor_ids = [] # To map FAISS index to visitor DB IDs
+
+def load_visitors_into_faiss():
+    global visitor_ids
+    if not faiss or not faiss_index:
+        return
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, embedding FROM visitors WHERE embedding IS NOT NULL")
+        rows = cur.fetchall()
+        if rows:
+            embeddings = []
+            visitor_ids = []
+            for row in rows:
+                embedding = np.frombuffer(row[1], dtype=np.float32)
+                embeddings.append(embedding)
+                visitor_ids.append(row[0])
+            
+            if embeddings:
+                faiss_index.reset()
+                faiss_index.add(np.array(embeddings).astype('float32'))
+                logger.info(f"Loaded {len(visitor_ids)} visitors into FAISS index.")
+    except Exception as e:
+        logger.error(f"Error loading visitors into FAISS: {e}")
+    finally:
+        conn.close()
+
+load_visitors_into_faiss()
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -227,121 +289,120 @@ def login():
 @app.route('/detect', methods=['POST', 'OPTIONS'])
 def detect():
     """
-    Object detection endpoint
-    Expects JSON: { "image": "base64_encoded_image_string" }
-    Returns: Array of detections with labels and bounding boxes
+    Enhanced detection with tracking and visitor identification
     """
     if request.method == 'OPTIONS':
         return '', 204
         
     if model is None:
         logger.error("Model not loaded")
-        return jsonify({'error': 'Model not loaded. Please restart the server.'}), 503
+        return jsonify({'error': 'Model not loaded.'}), 503
+
     try:
-        # Get JSON data from request
         data = request.json
-        
-        # Validate request data
         if not data or 'image' not in data:
-            logger.warning("No image provided in request")
-            return jsonify({'error': 'No image provided. Expected JSON with "image" field.'}), 400
+            return jsonify({'error': 'No image provided.'}), 400
 
-        # Decode base64 image
-        try:
-            image_data = base64.b64decode(data['image'])
-            nparr = np.frombuffer(image_data, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        except Exception as e:
-            logger.error(f"Image decoding failed: {e}")
-            return jsonify({'error': f'Failed to decode image: {str(e)}'}), 400
-
-        # Check if image was decoded successfully
+        image_data = base64.b64decode(data['image'])
+        nparr = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img is None:
-            logger.error("Decoded image is None - invalid image format")
-            return jsonify({'error': 'Invalid image format. Please provide a valid base64-encoded image.'}), 400
+            return jsonify({'error': 'Invalid image format.'}), 400
 
-        # Get image dimensions
-        height, width, channels = img.shape
-        logger.info(f"Processing image: {width}x{height}x{channels}")
-
-        # Run YOLO inference
-        logger.info("Running YOLO inference...")
-        results = model(img, conf=0.15, verbose=False)  # Added verbose=False to reduce logs
-
-        # Parse detections
+        height, width, _ = img.shape
+        
+        # Use tracking if requested or by default for video
+        # model.track returns results with .boxes.id
+        results = model.track(img, persist=True, conf=0.25, verbose=False)
+        
         detections = []
+        
+        # For Face Recognition, we'll also run FaceAnalysis on the whole frame
+        # (Optimally we'd only run it on person crops, but insightface prefers the full frame context for detection)
+        faces = []
+        if face_app:
+            faces = face_app.get(img)
+
         for result in results:
             boxes = result.boxes
-            logger.info(f"Detected {len(boxes)} objects")
-            
             for box in boxes:
-                # Get bounding box coordinates
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
-                
-                # Normalize coordinates (0-1 range)
-                x = x1 / width
-                y = y1 / height
-                w = (x2 - x1) / width
-                h = (y2 - y1) / height
-                
-                # Get class label and confidence
                 cls = int(box.cls[0])
                 label = model.names[cls]
                 confidence = float(box.conf[0])
+                track_id = int(box.id[0]) if box.id is not None else None
                 
+                visitor_status = "Unknown"
+                visitor_name = None
+                
+                # If it's a person, try to match with detected faces
+                if label == 'person' and faces:
+                    # Find face that falls within this person's bounding box
+                    for face in faces:
+                        fx1, fy1, fx2, fy2 = face.bbox.tolist()
+                        # Simple overlap check
+                        if fx1 >= x1 and fx2 <= x2 and fy1 >= y1 and fy2 <= y2:
+                            embedding = face.embedding.astype('float32')
+                            
+                            # Search in FAISS
+                            if faiss and faiss_index and faiss_index.ntotal > 0:
+                                D, I = faiss_index.search(np.array([embedding]), 1)
+                                if D[0][0] < 0.6: # Threshold for L2 distance (adjust as needed)
+                                    v_id = visitor_ids[I[0][0]]
+                                    visitor_status = "Returning Visitor"
+                                    # Update last seen in DB
+                                    conn = get_db_connection()
+                                    if conn:
+                                        cur = conn.cursor(cursor_factory=RealDictCursor)
+                                        cur.execute("UPDATE visitors SET last_seen = NOW(), visit_count = visit_count + 1 WHERE id = %s RETURNING name", (v_id,))
+                                        v_row = cur.fetchone()
+                                        visitor_name = v_row['name'] if v_row else "Visitor"
+                                        conn.commit()
+                                        conn.close()
+                                else:
+                                    visitor_status = "New Visitor"
+                                    # Add to DB
+                                    conn = get_db_connection()
+                                    if conn:
+                                        cur = conn.cursor()
+                                        cur.execute("INSERT INTO visitors (embedding) VALUES (%s) RETURNING id", (psycopg2.Binary(embedding.tobytes()),))
+                                        new_id = cur.fetchone()[0]
+                                        conn.commit()
+                                        conn.close()
+                                        # Refresh FAISS
+                                        load_visitors_into_faiss()
+                            else:
+                                visitor_status = "New Visitor"
+                                # First or no faiss
+                                conn = get_db_connection()
+                                if conn:
+                                    cur = conn.cursor()
+                                    cur.execute("INSERT INTO visitors (embedding) VALUES (%s) RETURNING id", (psycopg2.Binary(embedding.tobytes()),))
+                                    new_id = cur.fetchone()[0]
+                                    conn.commit()
+                                    conn.close()
+                                    load_visitors_into_faiss()
+                            break # One face per person for now
+
                 detections.append({
                     'label': label,
                     'confidence': round(confidence, 2),
+                    'track_id': track_id,
+                    'visitor_status': visitor_status,
+                    'visitor_name': visitor_name,
                     'box': {
-                        'x': round(x, 4),
-                        'y': round(y, 4),
-                        'width': round(w, 4),
-                        'height': round(h, 4)
+                        'x': round(x1 / width, 4),
+                        'y': round(y1 / height, 4),
+                        'width': round((x2 - x1) / width, 4),
+                        'height': round((y2 - y1) / height, 4)
                     }
                 })
-        
-        # Custom JSON encoder for numpy types
-        def json_serializer(obj):
-            if isinstance(obj, (np.float32, np.float64)):
-                return float(obj)
-            if isinstance(obj, (np.int32, np.int64)):
-                return int(obj)
-            raise TypeError(f"Type {type(obj)} not serializable")
 
-        import json
-        
-        # Save to database
-        user_id = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            try:
-                token = auth_header.split(' ')[1]
-                payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-                user_id = payload.get('user_id')
-            except Exception as e:
-                logger.warning(f"Invalid token during detection: {e}")
-
-        try:
-            conn = get_db_connection()
-            if conn:
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT INTO detections (user_id, results, created_at) VALUES (%s, %s, NOW())",
-                    (user_id, json.dumps(detections, default=json_serializer))
-                )
-                conn.commit()
-                cur.close()
-                conn.close()
-                logger.info(f"Saved detection results for user_id={user_id}")
-        except Exception as e:
-            logger.error(f"Failed to save detection to DB: {e}")
-
-        logger.info(f"✅ Returning {len(detections)} detections")
         return jsonify(detections), 200
 
     except Exception as e:
-        logger.error(f"❌ Unexpected error during detection: {e}", exc_info=True)
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+        logger.error(f"Detection error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 @app.route('/stats', methods=['GET'])
 def get_stats():
     """Optional: Get detection statistics"""
