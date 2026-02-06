@@ -75,3 +75,5 @@ export interface User {
   name: string;
   profilePicture?: string;
 }
+
+export type AppView = 'analytics' | 'settings' | 'history' | 'info' | 'ai';

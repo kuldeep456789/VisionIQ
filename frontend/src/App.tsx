@@ -6,13 +6,12 @@ import Settings from './components/Settings';
 import LoginPage from './components/LoginPage';
 import History from './components/History';
 import ProjectInfo from './components/ProjectInfo';
+import AIAssistant from './components/AIAssistant';
 
-import { User } from './types';
-
-type View = 'analytics' | 'settings' | 'history' | 'info';
+import { User, AppView } from './types';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('info');
+  const [currentView, setCurrentView] = useState<AppView>('info');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(window.innerWidth > 768);
   const [user, setUser] = useState<User>({ id: 0, name: 'Admin User', email: 'admin@visioniq.io', profilePicture: 'https://i.pravatar.cc/40?u=admin' });
@@ -52,6 +51,8 @@ const App: React.FC = () => {
         return <History />;
       case 'info':
         return <ProjectInfo />;
+      case 'ai':
+        return <AIAssistant />;
       default:
         return <ProjectInfo />;
     }

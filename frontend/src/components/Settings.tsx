@@ -139,6 +139,20 @@ const Settings: React.FC<SettingsProps> = ({ user, setUser }) => {
                             <span className="ml-3">Enable sound alarms on dashboard</span>
                         </label>
                     </SettingsCard>
+                    <SettingsCard title="AI Intelligence Configuration">
+                        <div>
+                            <label htmlFor="apiKey" className="block text-sm font-medium text-gray-500 dark:text-gray-400">Gemini API Key</label>
+                            <input
+                                type="password"
+                                id="apiKey"
+                                placeholder="Enter your Gemini API key"
+                                defaultValue={localStorage.getItem('gemini_api_key') || ''}
+                                onChange={(e) => localStorage.setItem('gemini_api_key', e.target.value)}
+                                className="mt-1 block w-full bg-gray-100 dark:bg-gray-dark border border-light-border dark:border-gray-light rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-blue focus:border-brand-blue"
+                            />
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Required for generating AI Security Insights in the Assistant tab.</p>
+                    </SettingsCard>
                     <SettingsCard title="Global Privacy">
                         <label className="flex items-center">
                             <input type="checkbox" className="h-5 w-5 bg-gray-100 dark:bg-gray-light border-light-border dark:border-gray-light text-brand-blue rounded focus:ring-brand-blue" />

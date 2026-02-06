@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
     server: {
-      port: 8000,
+      port: 5173,
       watch: {
         ignored: ['**/backend/**', '**/node_modules/**']
       }
@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './src'),
       }
     }
   };
